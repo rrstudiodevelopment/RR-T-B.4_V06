@@ -24,19 +24,9 @@ class RAHA_OT_ActivateHUD(bpy.types.Operator):
         obj = bpy.context.object
 
         if obj and obj.type == 'CAMERA':
-            if not obj.data.show_background_images:
-                obj.data.show_background_images = True
-                self.report({'INFO'}, "Background image enabled on active camera.")
+            obj.data.show_background_images = True
 
-        if not scene.raha_hud_use:
-            cam = scene.camera
-            if cam and cam.data.background_images:
-                for bg in cam.data.background_images:
-                    bg.show_background_image = False
-            scene.render.use_stamp = False
-            self.report({'INFO'}, "HUD disabled")
-            return {'FINISHED'}
-
+        # Paksa HUD aktif
         cams = [obj for obj in bpy.data.objects if obj.type == 'CAMERA']
         if cams:
             bpy.context.view_layer.objects.active = cams[0]
@@ -87,7 +77,7 @@ class RAHA_OT_ActivateHUD(bpy.types.Operator):
 
         bg_image.show_background_image = True
         bg_image.display_depth = 'FRONT'
-        bg_image.frame_method = 'FIT'  # Tambahan: pastikan FIT ke kamera
+        bg_image.frame_method = 'FIT'
         cam.data.show_background_images = True
 
         self.report({'INFO'}, "HUD activated")
@@ -146,7 +136,7 @@ class VIEW3D_PT_HUDPanel(bpy.types.Panel):
         layout = self.layout
         scene = context.scene
         
-        layout.label(text="HUD Settings ")
+        layout.label(text="HUD Settings")
         layout.prop(scene, "name", text="Scene Name")
         layout.prop(scene.render, "stamp_note_text", text="Animator Name")
         layout.prop(scene, "raha_hud_use_custom_path", text="Use Custom Safe Area Path")
@@ -154,19 +144,10 @@ class VIEW3D_PT_HUDPanel(bpy.types.Panel):
         if scene.raha_hud_use_custom_path:
             layout.prop(scene, "raha_hud_custom_path", text="Safe Area Image")
 
-        cam = scene.camera
-        highlight = False
-        if cam and cam.data.background_images:
-            if cam.data.background_images[0].show_background_image:
-                highlight = True
-
-        row = layout.row()  # Semua tombol dalam satu baris
+        row = layout.row()
         row.operator("raha.activate_hud", text="Activate HUD")
         row.operator("view3d.delete_safe_area_image", text="", icon='X')
-
-        op_toggle = row.operator("view3d.toggle_safe_area", text="", icon='HIDE_OFF')
-
-
+        row.operator("view3d.toggle_safe_area", text="", icon='HIDE_OFF')
 
 # ========== REGISTER ==========
 def register():
@@ -175,7 +156,6 @@ def register():
     bpy.utils.register_class(VIEW3D_OT_DeleteSafeAreaImage)
     bpy.utils.register_class(VIEW3D_PT_HUDPanel)
 
-    bpy.types.Scene.raha_hud_use = bpy.props.BoolProperty(name="Use HUD", default=False)
     bpy.types.Scene.raha_hud_use_custom_path = bpy.props.BoolProperty(name="Use Custom Safe Area Path", default=False)
     bpy.types.Scene.raha_hud_custom_path = bpy.props.StringProperty(name="Custom Image Path", subtype='FILE_PATH')
 
@@ -185,7 +165,6 @@ def unregister():
     bpy.utils.unregister_class(VIEW3D_OT_DeleteSafeAreaImage)
     bpy.utils.unregister_class(VIEW3D_PT_HUDPanel)
 
-    del bpy.types.Scene.raha_hud_use
     del bpy.types.Scene.raha_hud_use_custom_path
     del bpy.types.Scene.raha_hud_custom_path
 

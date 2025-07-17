@@ -482,36 +482,35 @@ class FLOATING_OT_Open_Mini_tools(bpy.types.Operator):
 
 #========================================= panggil panel AUDIO =========================== 
 
+
 class FLOATING_OT_open_audio(bpy.types.Operator):
-    """Audio HUD Playblast"""
     bl_idname = "floating.open_audio"
-    bl_label = "open_audio_tools"
-    
+    bl_label = "Audio"
+
     def execute(self, context):
-        bpy.ops.wm.call_panel(name="RAHA_PT_audio_tools", keep_open=True)  
-        return {'FINISHED'}  
+        bpy.ops.wm.call_panel(name="RAHA_PT_audio_tools", keep_open=True)
+        return {'FINISHED'}
     
 #========================================= panggil panel HUD =========================== 
 
 class FLOATING_OT_open_hud(bpy.types.Operator):
-    """Audio HUD Playblast"""
-    bl_idname = "floating.open_pb_hud"
-    bl_label = "open_pb_hud"
-    
+    bl_idname = "floating.open_hud"
+    bl_label = "HUD"
+
     def execute(self, context):
-        bpy.ops.wm.call_panel(name="RAHA_PT_HUD", keep_open=True)  
-        return {'FINISHED'}  
+        bpy.ops.wm.call_panel(name="RAHA_PT_HUD", keep_open=True)
+        return {'FINISHED'}
     
 #========================================= panggil panel PLAYBLAST =========================== 
 
+
 class FLOATING_OT_open_playblast(bpy.types.Operator):
-    """Audio HUD Playblast"""
     bl_idname = "floating.open_playblast"
-    bl_label = "open_pb_hud"
-    
+    bl_label = "Playblast"
+
     def execute(self, context):
-        bpy.ops.wm.call_panel(name="RAHA_PT_Tools_playblast", keep_open=True)  
-        return {'FINISHED'} 
+        bpy.ops.wm.call_panel(name="RAHA_PT_Tools_playblast", keep_open=True)
+        return {'FINISHED'}
     
 #============================================== Register ========================================    
 def register():
