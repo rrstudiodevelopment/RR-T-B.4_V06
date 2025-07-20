@@ -140,7 +140,7 @@ class VIEW3D_PT_HUDPanel(bpy.types.Panel):
         row = layout.row()
         row = layout.row(align=True)
         row.prop(scene, "raha_show_stamp_settings", toggle=False, text="", icon='PREFERENCES')  
-        row.operator("raha.activate_hud", text="Activate HUD")
+        row.operator("raha.activate_hud", text="Activate HUD Safe Area")
         row.operator("view3d.delete_safe_area_image", text="", icon='X')
         row.operator("view3d.toggle_safe_area", text="", icon='HIDE_OFF')
 
