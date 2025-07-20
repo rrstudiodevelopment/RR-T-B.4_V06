@@ -179,7 +179,7 @@ def register():
     
     bpy.types.Scene.raha_show_stamp_settings = bpy.props.BoolProperty(
         name="Show Stamp Settings",
-        default=False,
+        default=True,
         description="Tampilkan pengaturan HUD stamp"
     )
     
@@ -198,7 +198,7 @@ def register():
     bpy.types.Scene.use_stamp_marker = bpy.props.BoolProperty(name="Marker", default=False)
     bpy.types.Scene.use_stamp_filename = bpy.props.BoolProperty(name="Filename", default=False)
     bpy.types.Scene.use_stamp_sequencer_strip = bpy.props.BoolProperty(name="Sequencer Strip", default=False)
-#    bpy.types.Scene.use_stamp_note = bpy.props.BoolProperty(name="note", default=True)
+    bpy.types.Scene.use_stamp = bpy.props.BoolProperty(name="note", default=False)
 
     # ✅ Auto aktifkan 'burn to image'
     bpy.context.scene.render.use_stamp = True
