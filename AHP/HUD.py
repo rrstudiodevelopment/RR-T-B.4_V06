@@ -15,31 +15,23 @@ else:
 
 # ========== OPERATOR AKTIFKAN HUD ==========
 class RAHA_OT_ActivateHUD(bpy.types.Operator):
-    """Aktifkan HUD dengan background image dan render stamp"""
+    """Aktifkan HUD dengan background image, tidak ubah setting stamp user"""
     bl_idname = "raha.activate_hud"
     bl_label = "Activate HUD"
 
     def execute(self, context):
         scene = context.scene
-        obj = bpy.context.object
+        obj = context.object
 
         if obj and obj.type == 'CAMERA':
             obj.data.show_background_images = True
 
-        # Paksa HUD aktif
-        cams = [obj for obj in bpy.data.objects if obj.type == 'CAMERA']
+        cams = [cam for cam in bpy.data.objects if cam.type == 'CAMERA']
         if cams:
             bpy.context.view_layer.objects.active = cams[0]
             cams[0].select_set(True)
 
-        scene.render.use_stamp = True
-        scene.render.use_stamp_note = True
-        scene.render.use_stamp_camera = False
-        scene.render.use_stamp_render_time = False
-        scene.render.use_stamp_time = False
-        scene.render.use_stamp_filename = False
-        scene.render.use_stamp_lens = True
-        scene.render.stamp_font_size = 32
+        scene.render.use_stamp = True  # ✅ hanya aktifkan stamp saja
 
         for area in bpy.context.screen.areas:
             if area.type == 'VIEW_3D':
@@ -83,9 +75,8 @@ class RAHA_OT_ActivateHUD(bpy.types.Operator):
         self.report({'INFO'}, "HUD activated")
         return {'FINISHED'}
 
-# ========== TOGGLE SAFE AREA ==========
+# ========== OPERATOR LAINNYA ==========
 class VIEW3D_OT_ToggleSafeArea(bpy.types.Operator):
-    """Toggle safe area"""
     bl_idname = "view3d.toggle_safe_area"
     bl_label = "Toggle Safe Area"
 
@@ -107,9 +98,7 @@ class VIEW3D_OT_ToggleSafeArea(bpy.types.Operator):
 
         return {'FINISHED'}
 
-# ========== DELETE SAFE AREA IMAGE ==========
 class VIEW3D_OT_DeleteSafeAreaImage(bpy.types.Operator):
-    """Delete safe area image"""
     bl_idname = "view3d.delete_safe_area_image"
     bl_label = "Delete Safe Area"
 
@@ -126,28 +115,55 @@ class VIEW3D_OT_DeleteSafeAreaImage(bpy.types.Operator):
 
 # ========== PANEL ==========
 class VIEW3D_PT_HUDPanel(bpy.types.Panel):
-    """Panel HUD"""
     bl_label = "HUD Tools"
     bl_idname = "RAHA_PT_HUD"
     bl_space_type = 'VIEW_3D'
     bl_region_type = 'WINDOW'
+    bl_context = "scene"
 
     def draw(self, context):
         layout = self.layout
         scene = context.scene
-        
+        render = scene.render
+
         layout.label(text="HUD Settings")
         layout.prop(scene, "name", text="Scene Name")
-        layout.prop(scene.render, "stamp_note_text", text="Animator Name")
+        layout.prop(render, "stamp_note_text", text="Animator Name")
         layout.prop(scene, "raha_hud_use_custom_path", text="Use Custom Safe Area Path")
 
         if scene.raha_hud_use_custom_path:
             layout.prop(scene, "raha_hud_custom_path", text="Safe Area Image")
 
         row = layout.row()
+        row = layout.row(align=True)
+        row.prop(scene, "raha_show_stamp_settings", toggle=True, text="", icon='PREFERENCES')  
         row.operator("raha.activate_hud", text="Activate HUD")
         row.operator("view3d.delete_safe_area_image", text="", icon='X')
         row.operator("view3d.toggle_safe_area", text="", icon='HIDE_OFF')
+
+
+        row = layout.row()        
+        if scene.raha_show_stamp_settings:
+            box = layout.box()
+            col = box.column(align=True)
+            col.prop(render, "use_stamp", text="Burn into Image")  
+            col.prop(render, "use_stamp_note", text="ANIMATOR")                       
+            col.prop(render, "use_stamp_date", text="Date")
+            col.prop(render, "use_stamp_time", text="Time")
+            col.prop(render, "use_stamp_render_time", text="Render Time")
+            col.prop(render, "use_stamp_frame", text="Frame")
+            col.prop(render, "use_stamp_frame_range", text="Frame Range")
+            col.prop(render, "use_stamp_memory", text="Memory")
+            col.prop(render, "use_stamp_hostname", text="Hostname")
+            col.prop(render, "use_stamp_camera", text="Camera")
+            col.prop(render, "use_stamp_lens", text="Lens")
+            col.prop(render, "use_stamp_scene", text="Scene")
+            col.prop(render, "use_stamp_marker", text="Marker")
+            col.prop(render, "use_stamp_filename", text="Filename")
+            col.prop(render, "use_stamp_sequencer_strip", text="Sequencer Strip")
+        
+            box.prop(render, "stamp_font_size", text="Font Size")
+
 
 # ========== REGISTER ==========
 def register():
@@ -158,15 +174,58 @@ def register():
 
     bpy.types.Scene.raha_hud_use_custom_path = bpy.props.BoolProperty(name="Use Custom Safe Area Path", default=False)
     bpy.types.Scene.raha_hud_custom_path = bpy.props.StringProperty(name="Custom Image Path", subtype='FILE_PATH')
+    
+    bpy.types.Scene.raha_show_stamp_settings = bpy.props.BoolProperty(
+        name="Show Stamp Settings",
+        default=True,
+        description="Tampilkan pengaturan HUD stamp"
+    )
+    
+
+    # ✅ Set default aktif sesuai permintaan
+    bpy.types.Scene.use_stamp_date = bpy.props.BoolProperty(name="Date", default=False)
+    bpy.types.Scene.use_stamp_time = bpy.props.BoolProperty(name="Time", default=False)
+    bpy.types.Scene.use_stamp_render_time = bpy.props.BoolProperty(name="Render Time", default=False)
+    bpy.types.Scene.use_stamp_frame = bpy.props.BoolProperty(name="Frame", default=True)
+    bpy.types.Scene.use_stamp_frame_range = bpy.props.BoolProperty(name="Frame Range", default=False)
+    bpy.types.Scene.use_stamp_memory = bpy.props.BoolProperty(name="Memory", default=False)
+    bpy.types.Scene.use_stamp_hostname = bpy.props.BoolProperty(name="Hostname", default=False)
+    bpy.types.Scene.use_stamp_camera = bpy.props.BoolProperty(name="Camera", default=False)
+    bpy.types.Scene.use_stamp_lens = bpy.props.BoolProperty(name="Lens", default=True)
+    bpy.types.Scene.use_stamp_scene = bpy.props.BoolProperty(name="Scene", default=True)
+    bpy.types.Scene.use_stamp_marker = bpy.props.BoolProperty(name="Marker", default=False)
+    bpy.types.Scene.use_stamp_filename = bpy.props.BoolProperty(name="Filename", default=False)
+    bpy.types.Scene.use_stamp_sequencer_strip = bpy.props.BoolProperty(name="Sequencer Strip", default=False)
+#    bpy.types.Scene.use_stamp_note = bpy.props.BoolProperty(name="note", default=True)
+
+    # ✅ Auto aktifkan 'burn to image'
+    bpy.context.scene.render.use_stamp = True
 
 def unregister():
     bpy.utils.unregister_class(RAHA_OT_ActivateHUD)
     bpy.utils.unregister_class(VIEW3D_OT_ToggleSafeArea)
     bpy.utils.unregister_class(VIEW3D_OT_DeleteSafeAreaImage)
     bpy.utils.unregister_class(VIEW3D_PT_HUDPanel)
+    
+    del bpy.types.Scene.raha_show_stamp_settings
 
     del bpy.types.Scene.raha_hud_use_custom_path
     del bpy.types.Scene.raha_hud_custom_path
+
+    del bpy.types.Scene.use_stamp_date
+    del bpy.types.Scene.use_stamp_time
+    del bpy.types.Scene.use_stamp_render_time
+    del bpy.types.Scene.use_stamp_frame
+    del bpy.types.Scene.use_stamp_frame_range
+    del bpy.types.Scene.use_stamp_memory
+    del bpy.types.Scene.use_stamp_hostname
+    del bpy.types.Scene.use_stamp_camera
+    del bpy.types.Scene.use_stamp_lens
+    del bpy.types.Scene.use_stamp_scene
+    del bpy.types.Scene.use_stamp_marker
+    del bpy.types.Scene.use_stamp_filename
+    del bpy.types.Scene.use_stamp_sequencer_strip
+    del bpy.types.Scene.use_stamp_note
 
 if __name__ == "__main__":
     register()
