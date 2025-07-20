@@ -31,7 +31,8 @@ class RAHA_OT_ActivateHUD(bpy.types.Operator):
             bpy.context.view_layer.objects.active = cams[0]
             cams[0].select_set(True)
 
-        scene.render.use_stamp = True  # ✅ hanya aktifkan stamp saja
+        scene.render.use_stamp = True
+        scene.render.use_stamp_render_time = False            # ✅ hanya aktifkan stamp saja
 
         for area in bpy.context.screen.areas:
             if area.type == 'VIEW_3D':
@@ -193,10 +194,16 @@ def register():
     bpy.context.scene.render.use_stamp_frame = True
     bpy.context.scene.render.use_stamp_lens = True
     bpy.context.scene.render.use_stamp_scene = True
+    bpy.context.scene.render.use_stamp_camera = False
+    
+    
+    
     
 
     
-    
+    bpy.context.scene.render.use_stamp_note = True
+  
+    bpy.context.scene.render.use_stamp_filename = False
 
     
     
