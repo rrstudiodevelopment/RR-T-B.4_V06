@@ -122,11 +122,13 @@ class RAHA_OT_InfoPopup(bpy.types.Operator):
             col = layout.column()
             col.label(text="update 20/07/2025 - 15:39")
             col.label(text="Raha Tools v06 blender 4++")            
-            col.separator()            
+            col.separator() 
+            col.label(text="- Perbaikan Bug HUD safe area")
+                                   
 #            col.label(text="- Pemeliharaan server ")
 #            col.label(text="- update make overade di mini tools")
 #            col.label(text="- update import animation")
-            col.label(text="- Perbaikan Bug HUD safe area")
+
 #            col.separator()
 #            col.label(text="- add fitur keyframe editor di graph editor")
 #            col.label(text="- update security")        
@@ -208,7 +210,7 @@ class RAHA_PT_Tools_For_Animation(bpy.types.Panel):
             box = layout.box()
             row = box.row()
             row.operator("floating.open_audio", text="AUDIO", icon='SPEAKER')
-            row.operator("floating.open_hud", text="HUD", icon='SEQUENCE')
+            row.operator("floating.open_hud", text="HUD Safe Area", icon='SEQUENCE')
             box.operator("floating.open_playblast", text="PLAYBLAST", icon='RENDER_ANIMATION')
 
         
