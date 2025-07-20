@@ -126,7 +126,7 @@ class RAHA_OT_InfoPopup(bpy.types.Operator):
 #            col.label(text="- Pemeliharaan server ")
 #            col.label(text="- update make overade di mini tools")
 #            col.label(text="- update import animation")
-           col.label(text="- Perbaikan Bug HUD safe area")
+            col.label(text="- Perbaikan Bug HUD safe area")
 #            col.separator()
 #            col.label(text="- add fitur keyframe editor di graph editor")
 #            col.label(text="- update security")        
