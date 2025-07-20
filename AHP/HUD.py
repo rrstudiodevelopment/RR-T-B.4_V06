@@ -179,7 +179,7 @@ def register():
     
     bpy.types.Scene.raha_show_stamp_settings = bpy.props.BoolProperty(
         name="Show Stamp Settings",
-        default=True,
+        default=False,
         description="Tampilkan pengaturan HUD stamp"
     )
     
