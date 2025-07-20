@@ -179,29 +179,28 @@ def register():
     
     bpy.types.Scene.raha_show_stamp_settings = bpy.props.BoolProperty(
         name="Show Stamp Settings",
-        default=False,
+        default=True,
         description="Tampilkan pengaturan HUD stamp"
     )
     
 
-    # ✅ Set default aktif sesuai permintaan
-    bpy.types.Scene.use_stamp_date = bpy.props.BoolProperty(name="Date", default=False)
-    bpy.types.Scene.use_stamp_time = bpy.props.BoolProperty(name="Time", default=False)
-    bpy.types.Scene.use_stamp_render_time = bpy.props.BoolProperty(name="Render Time", default=False)
-    bpy.types.Scene.use_stamp_frame = bpy.props.BoolProperty(name="Frame", default=True)
-    bpy.types.Scene.use_stamp_frame_range = bpy.props.BoolProperty(name="Frame Range", default=False)
-    bpy.types.Scene.use_stamp_memory = bpy.props.BoolProperty(name="Memory", default=False)
-    bpy.types.Scene.use_stamp_hostname = bpy.props.BoolProperty(name="Hostname", default=False)
-    bpy.types.Scene.use_stamp_camera = bpy.props.BoolProperty(name="Camera", default=False)
-    bpy.types.Scene.use_stamp_lens = bpy.props.BoolProperty(name="Lens", default=True)
-    bpy.types.Scene.use_stamp_scene = bpy.props.BoolProperty(name="Scene", default=True)
-    bpy.types.Scene.use_stamp_marker = bpy.props.BoolProperty(name="Marker", default=False)
-    bpy.types.Scene.use_stamp_filename = bpy.props.BoolProperty(name="Filename", default=False)
-    bpy.types.Scene.use_stamp_sequencer_strip = bpy.props.BoolProperty(name="Sequencer Strip", default=False)
-    bpy.types.Scene.use_stamp = bpy.props.BoolProperty(name="note", default=False)
-
     # ✅ Auto aktifkan 'burn to image'
-    bpy.context.scene.render.use_stamp = True
+    bpy.context.scene.render.use_stamp = False
+    bpy.context.scene.render.stamp_font_size = 32
+        
+    bpy.context.scene.render.use_stamp_date = True
+    bpy.context.scene.render.use_stamp_time = True    
+    bpy.context.scene.render.use_stamp_frame = True
+    bpy.context.scene.render.use_stamp_lens = True
+    bpy.context.scene.render.use_stamp_scene = True
+    
+
+    
+    
+
+    
+    
+    
 
 def unregister():
     bpy.utils.unregister_class(RAHA_OT_ActivateHUD)
