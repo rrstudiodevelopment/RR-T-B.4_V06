@@ -15,7 +15,7 @@ else:
 
 # ========== OPERATOR AKTIFKAN HUD ==========
 class RAHA_OT_ActivateHUD(bpy.types.Operator):
-    """Aktifkan HUD dengan background image, tidak ubah setting stamp user"""
+    """Aktifkan HUD background image"""
     bl_idname = "raha.activate_hud"
     bl_label = "Activate HUD"
 
@@ -77,6 +77,7 @@ class RAHA_OT_ActivateHUD(bpy.types.Operator):
 
 # ========== OPERATOR LAINNYA ==========
 class VIEW3D_OT_ToggleSafeArea(bpy.types.Operator):
+    """visibility when HUD is on/off"""    
     bl_idname = "view3d.toggle_safe_area"
     bl_label = "Toggle Safe Area"
 
@@ -99,6 +100,7 @@ class VIEW3D_OT_ToggleSafeArea(bpy.types.Operator):
         return {'FINISHED'}
 
 class VIEW3D_OT_DeleteSafeAreaImage(bpy.types.Operator):
+    """Delete HUD and safe area"""     
     bl_idname = "view3d.delete_safe_area_image"
     bl_label = "Delete Safe Area"
 
@@ -136,7 +138,7 @@ class VIEW3D_PT_HUDPanel(bpy.types.Panel):
 
         row = layout.row()
         row = layout.row(align=True)
-        row.prop(scene, "raha_show_stamp_settings", toggle=True, text="", icon='PREFERENCES')  
+        row.prop(scene, "raha_show_stamp_settings", toggle=False, text="", icon='PREFERENCES')  
         row.operator("raha.activate_hud", text="Activate HUD")
         row.operator("view3d.delete_safe_area_image", text="", icon='X')
         row.operator("view3d.toggle_safe_area", text="", icon='HIDE_OFF')
