@@ -194,11 +194,14 @@ def export_bone_keyframe_data_pose(context, filepath):
             file.write(f"    bone.keyframe_insert(data_path='scale')\n")
 
             # Tulis custom properties
+            # Tulis custom properties
             custom_props = data["custom_properties"]
             if custom_props:
                 file.write(f"    # Custom properties\n")
                 for prop_name, prop_value in custom_props.items():
-                    if isinstance(prop_value, (int, float)):
+                    if isinstance(prop_value, bool):
+                        file.write(f"    bone['{prop_name}'] = {str(prop_value)}\n")  # True/False
+                    elif isinstance(prop_value, (int, float)):
                         file.write(f"    bone['{prop_name}'] = {prop_value}\n")
                     elif isinstance(prop_value, str):
                         file.write(f"    bone['{prop_name}'] = '{prop_value}'\n")
@@ -206,6 +209,7 @@ def export_bone_keyframe_data_pose(context, filepath):
                         file.write(f"    bone['{prop_name}'] = {list(prop_value)}\n")
                     else:
                         print(f"Properti {prop_name} pada bone {bone_name} tidak dapat diserialisasi dan akan diabaikan.")
+
 
     # Simpan frame awal dan akhir untuk dikembalikan nanti
     original_start_frame = context.scene.frame_start
