@@ -111,7 +111,7 @@ bpy.types.PoseBone.copy_constraints_influence = bpy.props.FloatProperty(
 
 #============================================= Panel info ==================================
 class RAHA_OT_InfoPopup(bpy.types.Operator):
-    """Menampilkan informasi Raha Tools"""
+    """Info update"""
     bl_idname = "raha.info_update"
     bl_label = "Info update"
 
@@ -120,12 +120,12 @@ class RAHA_OT_InfoPopup(bpy.types.Operator):
             layout = self.layout
             
             col = layout.column()
-            col.label(text="update 20/07/2025 - 15:39")
+            col.label(text="update 25/07/2025 - 20:00")
             col.label(text="Raha Tools v06 blender 4++")            
             col.separator() 
-            col.label(text="- Perbaikan Bug HUD safe area")
+            col.label(text="- Update UI")
                                    
-#            col.label(text="- Pemeliharaan server ")
+            col.label(text="- Update Keymap ")
 #            col.label(text="- update make overade di mini tools")
 #            col.label(text="- update import animation")
 
@@ -139,7 +139,124 @@ class RAHA_OT_InfoPopup(bpy.types.Operator):
         bpy.context.window_manager.popup_menu(draw_popup, title="Info", icon='INFO')
         return {'FINISHED'}    
     
-#=========================================== Panel Run Script ========================================================
+    
+#========================================== KEY MAP ===============================================================     
+    
+import bpy
+import os
+import shutil
+import tempfile
+
+
+TEMP_KEYMAP_DIR = os.path.join(tempfile.gettempdir(), "keymap_temp")
+os.makedirs(TEMP_KEYMAP_DIR, exist_ok=True)
+
+def get_keymap_presets(self, context):
+    presets_dir = os.path.join(bpy.utils.resource_path('LOCAL'), "scripts", "presets", "keyconfig")
+    items = []
+
+    # Tambahkan keymap bawaan Blender
+    if os.path.isdir(presets_dir):
+        for file in os.listdir(presets_dir):
+            if file.endswith(".py"):
+                name = os.path.splitext(file)[0]
+                full_path = os.path.join(presets_dir, file)
+                items.append((full_path, f"{name}", ""))
+
+    # Tambahkan keymap dari luar (disalin ke TEMP)
+    if os.path.isdir(TEMP_KEYMAP_DIR):
+        for file in os.listdir(TEMP_KEYMAP_DIR):
+            if file.endswith(".py"):
+                name = os.path.splitext(file)[0]
+                full_path = os.path.join(TEMP_KEYMAP_DIR, file)
+                items.append((full_path, f"{name}", ""))
+
+    items.sort(key=lambda x: x[1])
+    return items
+
+def update_keymap(self, context):
+    path = context.scene.keymap_ui_enum
+    if os.path.isfile(path):
+        bpy.ops.preferences.keyconfig_activate(filepath=path)
+
+bpy.types.Scene.keymap_ui_enum = bpy.props.EnumProperty(
+    name="Keymap",
+    description="Pilih keymap preset",
+    items=get_keymap_presets,
+    update=update_keymap
+)
+
+class KEYMAP_OT_OpenPrefs(bpy.types.Operator):
+    bl_idname = "keymap.open_preferences"
+    bl_label = "Edit Keymap"
+    bl_description = "Buka Preferences > Keymap"
+
+    def execute(self, context):
+        bpy.ops.screen.userpref_show('INVOKE_DEFAULT')
+        context.preferences.active_section = 'KEYMAP'
+        return {'FINISHED'}
+
+class KEYMAP_OT_Import(bpy.types.Operator):
+    bl_idname = "keymap.import_preset"
+    bl_label = "Import Keymap dari File"
+    bl_description = "Impor preset keymap dari file eksternal"
+
+    filepath: bpy.props.StringProperty(subtype="FILE_PATH")
+
+    def execute(self, context):
+        try:
+            if not self.filepath.lower().endswith(".py"):
+                self.report({'ERROR'}, "File harus berekstensi .py")
+                return {'CANCELLED'}
+
+            dest_path = os.path.join(TEMP_KEYMAP_DIR, os.path.basename(self.filepath))
+            shutil.copy2(self.filepath, dest_path)
+            context.scene.keymap_ui_enum = dest_path
+            self.report({'INFO'}, "Keymap berhasil diimpor dan diaktifkan")
+            return {'FINISHED'}
+        except Exception as e:
+            self.report({'ERROR'}, f"Gagal mengimpor: {e}")
+            return {'CANCELLED'}
+
+    def invoke(self, context, event):
+        context.window_manager.fileselect_add(self)
+        return {'RUNNING_MODAL'}
+
+class DeleteCustomKeymapOperator(bpy.types.Operator):
+    bl_idname = "wm.delete_custom_keymap"
+    bl_label = "Delete Custom Keymap"
+    bl_description = "Hapus keymap yang diimpor secara manual"
+
+    keymap_name: bpy.props.StringProperty()
+
+    def execute(self, context):
+        wm = context.window_manager
+        keyconfigs = wm.keyconfigs
+
+        try:
+            temp_path = os.path.join(TEMP_KEYMAP_DIR, f"{self.keymap_name}.py")
+
+            if os.path.exists(temp_path):
+                os.remove(temp_path)
+                self.report({'INFO'}, f"Keymap '{self.keymap_name}' berhasil dihapus.")
+            else:
+                self.report({'WARNING'}, f"Tidak ditemukan: {temp_path}")
+
+            # Coba kembalikan ke keymap default Blender
+            if "Blender" in keyconfigs:
+                keyconfigs.active = keyconfigs["Blender"]
+            else:
+                # Jika Blender tidak ada, fallback ke keymap pertama
+                keyconfigs.active = list(keyconfigs.values())[0]
+                self.report({'INFO'}, f"Fallback ke keymap: {keyconfigs.active.name}")
+
+            return {'FINISHED'}
+
+        except Exception as e:
+            self.report({'ERROR'}, f"Gagal hapus: {e}")
+            return {'CANCELLED'}
+    
+#=========================================== Panel UI Menu Tools ========================================================
 class RAHA_PT_Tools_For_Animation(bpy.types.Panel):
     """Panel tambahan yang muncul setelah Run Tools ditekan"""
     bl_label = "Raha Tools blender 4+"
@@ -155,7 +272,10 @@ class RAHA_PT_Tools_For_Animation(bpy.types.Panel):
         layout = self.layout
         wm = bpy.context.window_manager  # Pastikan ini ada sebelum digunakan        
         obj = context.object
-        scene = context.scene           
+        scene = context.scene   
+        scn = context.scene
+        wm = context.window_manager
+        keyconfigs = wm.keyconfigs                
         
         preview_collection = None             
 
@@ -173,57 +293,73 @@ class RAHA_PT_Tools_For_Animation(bpy.types.Panel):
         else:
             layout.label(text="Gambar tidak ditemukan")
             
-        # Tombol Info
+        
+#============================ SUbscribe DOnate  ====================================================
+
         row = layout.row()
         row.alignment = 'RIGHT'
-#        row.operator("raha.info_popup", text="WARNIG", icon='ERROR')
-        row.operator("raha.info_update", text="info update", icon='ERROR')        
-        # Cek apakah preview tersedia
+        row.operator("raha.subscribe", text="", icon='PLAY')            
+        row.operator("raha.donate", text="", icon='FUND')  
+        row.operator("raha.info_update", text="", icon='INFO')         
+                       
+#===================================== KEY MAP UI ===========================================
 
+        row = layout.row(align=True)
         
-        # Tombol Run Tools
+        row.prop(scn, "keymap_ui_enum", text="Keymap")  
+        row.operator("keymap.open_preferences", text="", icon="PREFERENCES")
+        row.operator("keymap.import_preset", text="", icon="IMPORT")         
 
-        layout.operator("raha.subscribe", text="Subscribe", icon='PLAY')            
-        layout.operator("raha.donate", text="Donate", icon='FUND')  
-        
-                      
-        active_keymap = wm.keyconfigs.active.name
-        layout.label(text=f"Active Keymap: {active_keymap}")   
-        row = layout.row()      
-        # Tombol untuk mengganti keymap
-        row.operator("wm.set_blender_keymap", text="Blender")
-        row.operator("wm.set_maya_keymap", text="Maya")
-        row = layout.row() 
-               
-        layout = self.layout       
+        # Tampilkan tombol Delete jika keymap berada di folder TEMP
+        active_name = keyconfigs.active.name
+        temp_file_path = os.path.join(TEMP_KEYMAP_DIR, f"{active_name}.py")
 
-        layout.operator("floating.open_import_animation", text="Studio Library")
+        if os.path.exists(temp_file_path):
+            op = row.operator("wm.delete_custom_keymap", text="", icon='TRASH')
+            op.keymap_name = active_name
+                        
+#==================================== Studio lib + Mini Tools =========================================                     
+        row = layout.row(align=True)     
+        row.operator("floating.open_import_animation", text="STUDIO LIBRARY ")
+        row.operator("floating.open_mini_tools", text="MINI TOOLS")         
     
  # ===================================== AHP ============================================== 
         # Header collapse + tombol info
         row = layout.row(align=True)
         row.prop(scene, "show_pb_tools", text="", icon='TRIA_DOWN' if scene.show_pb_tools else 'TRIA_RIGHT', emboss=False)
         row.label(text="AHP")
-        row.operator("wm.open_youtube_info", text="", icon='INFO')
 
         if scene.show_pb_tools:
+
+
+            # Baris pertama: tombol INFO di kanan atas
+
+            row.alignment = 'RIGHT'
+            row.operator("wm.open_youtube_info", text="", icon='INFO')
+            
             box = layout.box()
-            row = box.row()
+            row = box.row()            
+            # Baris berikutnya: tombol AUDIO dan HUD
+            row = box.row(align=True)
             row.operator("floating.open_audio", text="AUDIO", icon='SPEAKER')
             row.operator("floating.open_hud", text="HUD Safe Area", icon='SEQUENCE')
+
+            # Tombol PLAYBLAST di baris tersendiri
             box.operator("floating.open_playblast", text="PLAYBLAST", icon='RENDER_ANIMATION')
 
-        
-              
-        layout.operator("floating.open_mini_tools", text="Mini Tools")                           
-        layout = self.layout        
 
         
-        # Checkbox untuk menampilkan Tween Machine
-        layout.prop(scene, "show_tween_machine", text="Show Tween Machine")
+#==================================== Tween Machine ===================================================================   
+        row = layout.row(align=True)
+        row.prop(scene, "show_tween_machine", text="", icon='TRIA_DOWN' if scene.show_tween_machine else 'TRIA_RIGHT', emboss=False)
+        row.label(text="Tween Machine")
         
         # Jika checkbox dicentang, tampilkan tombol Tween Machine
         if scene.show_tween_machine:
+            
+            row.alignment = 'RIGHT'            
+            row.operator("raha.tween_machine", text="", icon='INFO') 
+                       
             layout.label(text="Tween Slider:")
             layout.prop(scene, "pose_breakdowner_factor", text="Factor")
 
@@ -267,16 +403,30 @@ class RAHA_PT_Tools_For_Animation(bpy.types.Panel):
             layout.label(text="==================================================")                
 #================================ Menu parent conststraint ==================================================================      
         # Checkbox untuk menampilkan Tween Machine
-        layout.prop(scene, "show_parent", text="Parent - Smart Bake - Step snap")
-        if scene.show_parent: 
-            layout.label(text="Parent Constraint")         
-            row = layout.row()        
+        row = layout.row(align=True)
+        row.prop(scene, "show_parent", text="", icon='TRIA_DOWN' if scene.show_parent else 'TRIA_RIGHT', emboss=False)
+        row.label(text="Parent - Smart Bake - Step snap")        
+
+        if scene.show_parent:
+            
+            # Tombol INFO di kanan atas
+
+            row.alignment = 'RIGHT'
+            row.operator("raha.parent_constraint", text="", icon='INFO')              
+
+            # Box untuk tombol-tombol lain
+            row = layout.row()            
+            box = layout.box()
+
+            row = box.row(align=True)        
             row.operator("floating.open_childof", text="Child-of")
             row.operator("floating.open_locrote", text="Locrote")  
-                   
-            layout = self.layout
-            layout.operator("floating.open_smart_bake", text="Smart Bake")               
-            layout.operator("floating.open_fake_step", text="Fake N Step Snap")
+
+            box.operator("floating.open_smart_bake", text="Smart Bake")               
+            box.operator("floating.open_fake_step", text="Fake N Step Snap")
+
+
+
         
 #========================================================================================================================
 
@@ -326,7 +476,7 @@ class RAHA_PT_Tools_For_Animation(bpy.types.Panel):
 
 #========================================= Def Donate Link ===================================================
 class RAHA_OT_Donate(bpy.types.Operator):
-    """Membuka link donasi"""
+    """donasi"""
     bl_idname = "raha.donate"
     bl_label = "Donate"
 
@@ -335,13 +485,33 @@ class RAHA_OT_Donate(bpy.types.Operator):
         return {'FINISHED'}
 #========================================= Def Subcribe Link ===================================================    
 class RAHA_OT_Subscribe(bpy.types.Operator):
-    """Membuka link subscribe"""
+    """subscribe"""
     bl_idname = "raha.subscribe"
     bl_label = "subscribe"
 
     def execute(self, context):
         webbrowser.open("https://www.youtube.com/@RR_STUDIO26")
         return {'FINISHED'}    
+
+#========================================= Def Tutorial Tween Machine ===================================================    
+class RAHA_OT_Tween_Machine_Tutor(bpy.types.Operator):
+    """Tutorial Tween Machine"""
+    bl_idname = "raha.tween_machine"
+    bl_label = "Tween Machine"
+
+    def execute(self, context):
+        webbrowser.open("https://www.youtube.com/watch?v=x9gs3Sz8S_Q")
+        return {'FINISHED'}  
+    
+#========================================= Def Tutorial Parent Constraint ===================================================    
+class RAHA_OT_Parent_Constraint_Tutor(bpy.types.Operator):
+    """Tutorial parent constraint"""
+    bl_idname = "raha.parent_constraint"
+    bl_label = "Parent Constraint"
+
+    def execute(self, context):
+        webbrowser.open("https://www.youtube.com/watch?v=zkUT4vZdL_8")
+        return {'FINISHED'}     
 
 
     
@@ -370,41 +540,7 @@ class RAHA_OT_RunTools(bpy.types.Operator):
             
             
 #============================================================================================================    
-#                                           KEYMAP
 
-
-# Fungsi untuk mengganti keymap
-def set_keymap(keymap_type):
-    keyconfigs = bpy.context.window_manager.keyconfigs
-    
-    blender_keymap = keyconfigs.get("Blender")
-    maya_keymap = keyconfigs.get("maya")  # Pastikan ini adalah keymap Maya
-        
-    if keymap_type == 'BLENDER' and blender_keymap:
-        keyconfigs.active = blender_keymap
-    elif keymap_type == 'MAYA' and maya_keymap:
-        keyconfigs.active = maya_keymap
-    else:
-        # Jika keymap yang dipilih tidak ada
-        print(f"Keymap '{keymap_type}' tidak ditemukan. Pastikan keymap sudah diinstal.")
-
-# Operator untuk tombol keymap Blender
-class SetBlenderKeymapOperator(bpy.types.Operator):
-    bl_idname = "wm.set_blender_keymap"
-    bl_label = "Set Blender Keymap"
-    
-    def execute(self, context):
-        set_keymap('BLENDER')
-        return {'FINISHED'}
-
-# Operator untuk tombol keymap Maya
-class SetMayaKeymapOperator(bpy.types.Operator):
-    bl_idname = "wm.set_maya_keymap"
-    bl_label = "Set Maya Keymap"
-    
-    def execute(self, context):
-        set_keymap('MAYA')
-        return {'FINISHED'}   
     
     
 #========================================= panggil panel floating Save_Animation=========================== 
@@ -555,14 +691,29 @@ def register():
     if os.path.exists(icon_path):
         preview_collections["raha_previews"].load("raha_icon", icon_path, 'IMAGE')
 
+#=============================== kEY-MAP ===================================================        
+
+    bpy.types.Scene.keymap_ui_enum = bpy.props.EnumProperty(
+        name="Keymap",
+        description="Pilih keymap preset",
+        items=get_keymap_presets,
+        update=update_keymap
+    )        
+#================================================================================================ 
 
     bpy.utils.register_class(RAHA_OT_InfoPopup)
     bpy.utils.register_class(RAHA_OT_Donate)
-    bpy.utils.register_class(RAHA_OT_Subscribe)      
+    bpy.utils.register_class(RAHA_OT_Subscribe)
+    bpy.utils.register_class(RAHA_OT_Tween_Machine_Tutor)         
+    bpy.utils.register_class(RAHA_OT_Parent_Constraint_Tutor)
+         
     bpy.utils.register_class(RAHA_OT_RunTools)
-    
-    bpy.utils.register_class(SetBlenderKeymapOperator)  
-    bpy.utils.register_class(SetMayaKeymapOperator)  
+
+    bpy.utils.register_class(KEYMAP_OT_OpenPrefs) 
+    bpy.utils.register_class(KEYMAP_OT_Import)  
+    bpy.utils.register_class(DeleteCustomKeymapOperator)
+         
+     
 #========================== Animation library ===================
     bpy.utils.register_class(FLOATING_OT_Open_Save_Animation)          
     bpy.utils.register_class(FLOATING_OT_Open_Import_Animation) 
@@ -581,7 +732,9 @@ def register():
 #========================== FLOATING_OT_Open__Pb_Hud =============================      
     bpy.utils.register_class(FLOATING_OT_open_audio )   
     bpy.utils.register_class(FLOATING_OT_open_hud )  
-    bpy.utils.register_class(FLOATING_OT_open_playblast )       
+    bpy.utils.register_class(FLOATING_OT_open_playblast )  
+    
+             
    
            
         
@@ -642,6 +795,10 @@ def unregister():
     if RAHA_PT_Tools_For_Animation.preview_collection:
         bpy.utils.previews.remove(RAHA_PT_Tools_For_Animation.preview_collection)
         RAHA_PT_Tools_For_Animation.preview_collection = None
+        
+    for cls in reversed(classes):
+        bpy.utils.unregister_class(cls)
+    del bpy.types.Scene.keymap_ui_enum        
         
 if __name__ == "__main__":
     register()
