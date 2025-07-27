@@ -120,17 +120,17 @@ class RAHA_OT_InfoPopup(bpy.types.Operator):
             layout = self.layout
             
             col = layout.column()
-            col.label(text="update 20/07/2025 - 15:39")
+            col.label(text="update 27/07/2025 - 20:22")
             col.label(text="Raha Tools v06 blender 4++")            
             col.separator() 
             col.label(text="- Perbaikan Bug HUD safe area")
                                    
-#            col.label(text="- Pemeliharaan server ")
-#            col.label(text="- update make overade di mini tools")
-#            col.label(text="- update import animation")
+            col.label(text="- Pemeliharaan server ")
+            col.label(text="- update mini tools")
+            col.label(text="- update bug studio animation")
 
-#            col.separator()
-#            col.label(text="- add fitur keyframe editor di graph editor")
+            col.separator()
+            col.label(text="- Add miror Pose di mini tools")
 #            col.label(text="- update security")        
 #            col.separator()
 #            col.operator("raha.pb_tool", text="How to Use")            
