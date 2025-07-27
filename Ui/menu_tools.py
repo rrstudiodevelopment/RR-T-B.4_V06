@@ -127,7 +127,7 @@ class RAHA_OT_InfoPopup(bpy.types.Operator):
                                    
             col.label(text="- Pemeliharaan server ")
             col.label(text="- update mini tools")
-            col.label(text="- update bug studio animation")
+            col.label(text="- update bug studio Library")
 
             col.separator()
             col.label(text="- Add miror Pose di mini tools")
