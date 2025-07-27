@@ -224,6 +224,25 @@ class OBJECT_OT_CopyRotation(bpy.types.Operator):
 
         self.report({'INFO'}, f"Copy Rotation Constraint applied from {target_bone.name} to {source_bone.name}.")
         return {'FINISHED'}
+    
+#======================================= Copy Miror ============================================================= 
+class OBJECT_OT_CopyMirrorPose(bpy.types.Operator):
+    """Copy Pose and Mirror it to the other side"""
+    bl_idname = "pose.copy_mirror_pose"
+    bl_label = "Copy Mirror Pose"
+    bl_options = {'REGISTER', 'UNDO'}
+
+    def execute(self, context):
+        if context.mode != 'POSE':
+            self.report({'WARNING'}, "Switch to Pose Mode to use this.")
+            return {'CANCELLED'}
+
+        bpy.ops.pose.copy()
+        bpy.ops.pose.paste(flipped=True)
+        self.report({'INFO'}, "Pose copied and mirrored.")
+        return {'FINISHED'}
+    
+    
        
 
 #=========================================================================================================================
@@ -379,64 +398,60 @@ class VIEW3D_PT_MiniTools(bpy.types.Panel):
     bl_space_type = 'VIEW_3D'
     bl_region_type = 'WINDOW'    
     bl_ui_units_x = 10
-
-    def draw(self, context):
-        layout = self.layout            
-        wm = context.window_manager   
                 
-        layout.label(text="Anti-lag")            
-        row = layout.row()  
-              
-        row.operator("floating.open_decimate_temporary", text="Decimate_temporary")  
-     
-        row = layout.row()                           
+    def draw(self, context):
+        layout = self.layout
         scene = context.scene
-        # Cek status show_viewport dari Particle System Modifier
-        particle_show_viewport = False
-        for obj in context.selected_objects:
-            if obj.type == 'MESH':
-                for mod in obj.modifiers:
-                    if mod.type == 'PARTICLE_SYSTEM':
-                        particle_show_viewport = mod.show_viewport
-                        break
+        wm = context.window_manager
         
-        # Tentukan ikon untuk Particle berdasarkan status show_viewport
-        particle_icon = 'HIDE_OFF' if particle_show_viewport else 'HIDE_ON'
+        # Main styling settings
+        layout.use_property_split = True
+        layout.use_property_decorate = False  # Smoother animation
         
-        # Tombol toggle Particle dengan ikon yang sesuai
-        row.operator("object.toggle_particle_viewport", text="Toggle Particle", icon=particle_icon, depress=particle_show_viewport)   
-        layout.separator()                       
-        layout.prop(scene, "save_aman", text="keep it safe")
-        layout.prop(scene.render, "use_simplify", text="use Render Simplify")      
-        # Jika Render Simplify aktif, tampilkan slider untuk subdivision
+
+
+
+        # ==================== SAFETY & SIMPLIFY ====================
+        safety_box = layout.box()
+        safety_box.label(text="Performance", icon='TIME')               
+                
+        safety_box.prop(scene, "save_aman", text="Safety Mode", icon='LOCKED' if scene.save_aman else 'UNLOCKED')
+        safety_box.prop(scene.render, "use_simplify", text="Simplify Render")
+        
         if scene.render.use_simplify:
-            layout.prop(scene, "simplify_subdivision", text="Simplify Subdivision")
-
-#            scene.render.simplify_subdivision = scene.simplify_subdivision          
-#======================================================================================================  
-        layout = self.layout      
-        layout.separator()
-        layout.label(text="LINK:")
-        row = layout.row()
-        row.operator("object.only_override", text="Make Override", icon="LINKED")
-
-        row = layout.row()
-        row.operator("object.override_local", text="Make & Local Override", icon="FILE_TICK")
-
-#======================================================================================================                    
-        layout.separator()                        
-        layout.label(text="Alignment Tools for Bones")
-        layout.operator("object.cursor_to_selected", text="Cursor to Selected", icon="CURSOR")
-        layout.operator("object.select_to_cursor", text="Select to Cursor", icon="CURSOR")
-        layout.operator("pose.align_tool", text="Align Tool", icon="CON_TRANSFORM")
-        layout.operator("pose.auto_copy_rotation_constraint", text="Copy Rotation", icon="CON_ROTLIKE")
+            simplify_row = safety_box.row()
+            simplify_row.prop(scene, "simplify_subdivision", text="Subdivision", slider=True)
         
-        layout.label(text="Add-Controler")
-        layout.operator("object.add_controler", text="Add-Controler", icon="BONE_DATA")        
+        # ==================== LINK TOOLS ====================
+        link_box = layout.box()
+        link_box.label(text="Linking Tools", icon='LINKED')
+        
+        flow = link_box.grid_flow(row_major=True, columns=2, even_columns=True, even_rows=True, align=True)
+        flow.operator("object.only_override", text="Make Override", icon="LINKED")
+        flow.operator("object.override_local", text="Local Override", icon="FILE_TICK")
+        
+        # ==================== ALIGNMENT TOOLS ====================
+        align_box = layout.box()
+        align_box.label(text="Bone Alignment", icon='BONE_DATA')
+        
+        align_grid = align_box.grid_flow(row_major=True, columns=3, even_columns=True, align=True)
+        align_grid.operator("object.cursor_to_selected", text="", icon="CURSOR")
+        align_grid.operator("object.select_to_cursor", text="", icon="PIVOT_CURSOR")
+        align_grid.operator("pose.align_tool", text="", icon="CON_TRANSFORM")
+        
+        # ==================== POSE TOOLS ====================
+        pose_box = layout.box()
+        pose_box.label(text="Pose Tools", icon='ARMATURE_DATA')
+        
+        pose_grid = pose_box.grid_flow(row_major=True, columns=2, even_columns=True, align=True)
+        pose_grid.operator("pose.auto_copy_rotation_constraint", text="Copy Rotation", icon="AUTOMERGE_ON")
+        pose_grid.operator("pose.copy_mirror_pose", text="Mirror Pose", icon="ARMATURE_DATA")    
+        pose_box = layout.box()         
+        pose_box.operator("object.add_controler", text="Add Controller", icon="BONE_DATA")
+                            
           
 #=========================================================================================================================
 #                                               REGISTER     
-   
 # Daftar operator dan panel untuk registrasi
 def register():
     
@@ -457,7 +472,9 @@ def register():
     bpy.utils.register_class(OBJECT_OT_CursorToSelected)
     bpy.utils.register_class(OBJECT_OT_SelectToCursor)
     bpy.utils.register_class(OBJECT_OT_AlignTool)
-    bpy.utils.register_class(OBJECT_OT_CopyRotation)       
+    bpy.utils.register_class(OBJECT_OT_CopyMirrorPose)     
+    bpy.utils.register_class(OBJECT_OT_CopyRotation)  
+         
               
     bpy.utils.register_class(VIEW3D_PT_MiniTools)    
     bpy.utils.register_class(OBJECT_OT_add_controler)
@@ -477,6 +494,7 @@ def unregister():
     bpy.utils.unregister_class(OBJECT_OT_add_controler)        
     bpy.utils.unregister_class(OBJECT_OT_CursorToSelected)
     bpy.utils.unregister_class(OBJECT_OT_SelectToCursor)
+    bpy.utils.unregister_class(OBJECT_OT_CopyMirrorPose)     
     bpy.utils.unregister_class(OBJECT_OT_AlignTool)
   
     bpy.utils.unregister_class(OBJECT_OT_CopyRotation)  
@@ -487,3 +505,4 @@ def unregister():
 
 if __name__ == "__main__":
     register()
+
