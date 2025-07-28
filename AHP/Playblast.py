@@ -2,7 +2,10 @@ import bpy
 import os
 import subprocess
 
+
+
 # =================================== UPDATE RESOLUSI & WARNING ===================================
+
 def update_temp_resolution(self, context):
     scene = context.scene
     percentage = scene.RAHA_temporary_resolution_percentage / 100
@@ -42,9 +45,17 @@ class RAHA_OT_Playblast(bpy.types.Operator):
         original_resolution_y = scene.render.resolution_y
         original_resolution_percentage = scene.render.resolution_percentage
 
+        # Gunakan frame range custom jika diaktifkan
         if scene.RAHA_use_custom_frame_range:
-            scene.frame_start = scene.RAHA_custom_start_frame
-            scene.frame_end = scene.RAHA_custom_end_frame
+            temp_start = scene.RAHA_custom_start_frame
+            temp_end = scene.RAHA_custom_end_frame
+        else:
+            temp_start = original_start_frame
+            temp_end = original_end_frame
+
+        scene.frame_start = temp_start
+        scene.frame_end = temp_end
+
 
         self.switch_workspace("Animation")
 
@@ -171,8 +182,10 @@ class RAHA_PT_PlayblastPanel(bpy.types.Panel):
         row.prop(scene, "RAHA_pb_show_frame_range", icon="TRIA_DOWN" if scene.RAHA_pb_show_frame_range else "TRIA_RIGHT", emboss=False)
         row.label(text="Frame Range Temporary")
         if scene.RAHA_pb_show_frame_range:
+            box.prop(scene, "RAHA_use_custom_frame_range", text="Active")
             box.prop(scene, "RAHA_custom_start_frame", text="Start Frame")
             box.prop(scene, "RAHA_custom_end_frame", text="End Frame")
+
 
         layout.separator()
         row = layout.row()
