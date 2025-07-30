@@ -264,6 +264,7 @@ class SimpleTransformPanel(bpy.types.Panel):
     bl_space_type = 'VIEW_3D'
     bl_region_type = 'UI'
     bl_category = 'Raha_Tools'
+    bl_order = 3    
 
     def draw(self, context):
         layout = self.layout
@@ -388,9 +389,9 @@ def register():
     bpy.types.Scene.custom_scale_axes = bpy.props.BoolVectorProperty(
         name="Scale Axes", default=(False, False, False), subtype='XYZ')
     bpy.types.Scene.panel_transform = bpy.props.BoolProperty(
-        name="Show Panel Transform", default=True)
+        name="Show Panel Transform", default=False)
     bpy.types.Scene.panel_edit_value = bpy.props.BoolProperty(
-        name="Show Panel edit value", default=True)
+        name="Show Panel edit value", default=False)
 
 def unregister():
     for cls in reversed(classes):
