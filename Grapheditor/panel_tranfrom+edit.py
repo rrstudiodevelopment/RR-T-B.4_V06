@@ -1,423 +1,400 @@
-
 import bpy
 
+#============================ Utility ============================
+def is_quaternion_mode(obj_or_bone):
+    return getattr(obj_or_bone, "rotation_mode", "") == 'QUATERNION'
+
+#============================ Operators ============================
 
 class ApplyLocationOperator(bpy.types.Operator):
-    bl_idname = "pose.apply_location"
+    bl_idname = "object.apply_location"
     bl_label = "Apply Location"
 
     def execute(self, context):
         scene = context.scene
         obj = context.active_object
-        for bone in obj.pose.bones:
-            if bone.bone.select:
-                for i in range(3):
-                    if scene.custom_location_axes[i]:
-                        bone.location[i] = scene.custom_location[i]
-        self.report({'INFO'}, "Applied Location to selected bones")
+
+        if obj.type == 'ARMATURE' and obj.mode == 'POSE':
+            for bone in obj.pose.bones:
+                if bone.bone.select:
+                    for i in range(3):
+                        if scene.custom_location_axes[i]:
+                            bone.location[i] = scene.custom_location[i]
+        else:
+            for i in range(3):
+                if scene.custom_location_axes[i]:
+                    obj.location[i] = scene.custom_location[i]
+
+        self.report({'INFO'}, "Applied Location")
         return {'FINISHED'}
 
+
 class ResetLocationOperator(bpy.types.Operator):
-    bl_idname = "pose.reset_location"
+    bl_idname = "object.reset_location"
     bl_label = "Reset Location"
 
     def execute(self, context):
         obj = context.active_object
-        for bone in obj.pose.bones:
-            if bone.bone.select:
-                bone.location = (0.0, 0.0, 0.0)
-        self.report({'INFO'}, "Reset Location to default (0, 0, 0) for selected bones")
+
+        if obj.type == 'ARMATURE' and obj.mode == 'POSE':
+            for bone in obj.pose.bones:
+                if bone.bone.select:
+                    bone.location = (0.0, 0.0, 0.0)
+        else:
+            obj.location = (0.0, 0.0, 0.0)
+
+        self.report({'INFO'}, "Reset Location to default (0,0,0)")
         return {'FINISHED'}
 
+
 class ApplyRotationOperator(bpy.types.Operator):
-    bl_idname = "pose.apply_rotation"
+    bl_idname = "object.apply_rotation"
     bl_label = "Apply Rotation"
 
     def execute(self, context):
         scene = context.scene
         obj = context.active_object
-        for bone in obj.pose.bones:
-            if bone.bone.select:
+
+        def apply_rotation(target):
+            if is_quaternion_mode(target):
+                quat = target.rotation_quaternion.copy()
+                for i in range(1, 4):  # x,y,z => index 1,2,3 (skip w)
+                    if scene.custom_rotation_axes[i - 1]:
+                        quat[i] = scene.custom_rotation[i - 1]
+                target.rotation_quaternion = quat
+            else:
                 for i in range(3):
                     if scene.custom_rotation_axes[i]:
-                        bone.rotation_euler[i] = scene.custom_rotation[i]
-        self.report({'INFO'}, "Applied Rotation to selected bones")
+                        target.rotation_euler[i] = scene.custom_rotation[i]
+
+        if obj.type == 'ARMATURE' and obj.mode == 'POSE':
+            for bone in obj.pose.bones:
+                if bone.bone.select:
+                    apply_rotation(bone)
+        else:
+            apply_rotation(obj)
+
+        self.report({'INFO'}, "Applied Rotation")
         return {'FINISHED'}
 
+
 class ResetRotationOperator(bpy.types.Operator):
-    bl_idname = "pose.reset_rotation"
+    bl_idname = "object.reset_rotation"
     bl_label = "Reset Rotation"
 
     def execute(self, context):
         obj = context.active_object
-        for bone in obj.pose.bones:
-            if bone.bone.select:
-                bone.rotation_euler = (0.0, 0.0, 0.0)
-        self.report({'INFO'}, "Reset Rotation to default (0, 0, 0) for selected bones")
+
+        def reset_rotation(target):
+            if is_quaternion_mode(target):
+                target.rotation_quaternion = (1.0, 0.0, 0.0, 0.0)
+            else:
+                target.rotation_euler = (0.0, 0.0, 0.0)
+
+        if obj.type == 'ARMATURE' and obj.mode == 'POSE':
+            for bone in obj.pose.bones:
+                if bone.bone.select:
+                    reset_rotation(bone)
+        else:
+            reset_rotation(obj)
+
+        self.report({'INFO'}, "Reset Rotation")
         return {'FINISHED'}
 
+
 class ApplyScaleOperator(bpy.types.Operator):
-    bl_idname = "pose.apply_scale"
+    bl_idname = "object.apply_scale"
     bl_label = "Apply Scale"
 
     def execute(self, context):
         scene = context.scene
         obj = context.active_object
-        for bone in obj.pose.bones:
-            if bone.bone.select:
-                for i in range(3):
-                    if scene.custom_scale_axes[i]:
-                        bone.scale[i] = scene.custom_scale[i]
-        self.report({'INFO'}, "Applied Scale to selected bones")
+
+        if obj.type == 'ARMATURE' and obj.mode == 'POSE':
+            for bone in obj.pose.bones:
+                if bone.bone.select:
+                    for i in range(3):
+                        if scene.custom_scale_axes[i]:
+                            bone.scale[i] = scene.custom_scale[i]
+        else:
+            for i in range(3):
+                if scene.custom_scale_axes[i]:
+                    obj.scale[i] = scene.custom_scale[i]
+
+        self.report({'INFO'}, "Applied Scale")
         return {'FINISHED'}
 
+
 class ResetScaleOperator(bpy.types.Operator):
-    bl_idname = "pose.reset_scale"
+    bl_idname = "object.reset_scale"
     bl_label = "Reset Scale"
 
     def execute(self, context):
         obj = context.active_object
-        for bone in obj.pose.bones:
-            if bone.bone.select:
-                bone.scale = (1.0, 1.0, 1.0)
-        self.report({'INFO'}, "Reset Scale to default (1, 1, 1) for selected bones")
+
+        if obj.type == 'ARMATURE' and obj.mode == 'POSE':
+            for bone in obj.pose.bones:
+                if bone.bone.select:
+                    bone.scale = (1.0, 1.0, 1.0)
+        else:
+            obj.scale = (1.0, 1.0, 1.0)
+
+        self.report({'INFO'}, "Reset Scale")
         return {'FINISHED'}
+
 
 class ResetAllOperator(bpy.types.Operator):
-    bl_idname = "pose.reset_all"
-    bl_label = "Reset all"
-
-    def execute(self, context):
-        obj = context.active_object
-        for bone in obj.pose.bones:
-            if bone.bone.select:
-                bone.location = (0.0, 0.0, 0.0)
-                bone.scale = (1.0, 1.0, 1.0)
-                bone.rotation_euler = (0.0, 0.0, 0.0)
-
-        self.report({'INFO'}, "Reset all transformations to default for selected bones")
-        return {'FINISHED'}
-
-#============= PANEL TRANSFORM ==============================================================
-
-class SetTransformForSelectedBonesOperator(bpy.types.Operator):
-    """Operator untuk menetapkan nilai transformasi untuk semua bone yang terseleksi"""
-    bl_idname = "pose.set_transform_selected_bones"
-    bl_label = "Set Transform for Selected Bones"
-
-    transform_type: bpy.props.StringProperty()
-    value: bpy.props.FloatProperty()
-
-    def execute(self, context):
-        if context.object.mode != 'POSE':
-            self.report({'ERROR'}, "Harap berada di Pose Mode")
-            return {'CANCELLED'}
-
-        selected_bones = context.selected_pose_bones
-        if not selected_bones:
-            self.report({'ERROR'}, "Tidak ada bone yang terseleksi")
-            return {'CANCELLED'}
-
-        for bone in selected_bones:
-            if self.transform_type == 'LOCATION_X':
-                bone.location.x = self.value
-            elif self.transform_type == 'LOCATION_Y':
-                bone.location.y = self.value
-            elif self.transform_type == 'LOCATION_Z':
-                bone.location.z = self.value
-            elif self.transform_type == 'ROTATION_X':
-                bone.rotation_euler.x = self.value
-            elif self.transform_type == 'ROTATION_Y':
-                bone.rotation_euler.y = self.value
-            elif self.transform_type == 'ROTATION_Z':
-                bone.rotation_euler.z = self.value
-            elif self.transform_type == 'SCALE_X':
-                bone.scale.x = self.value
-            elif self.transform_type == 'SCALE_Y':
-                bone.scale.y = self.value
-            elif self.transform_type == 'SCALE_Z':
-                bone.scale.z = self.value
-
-        return {'FINISHED'}
-
-class ResetLocationOperator(bpy.types.Operator):
-    bl_idname = "pose.reset_location"
-    bl_label = "Reset Location"
-
-    def execute(self, context):
-        if context.object.mode != 'POSE':
-            self.report({'ERROR'}, "Harap berada di Pose Mode")
-            return {'CANCELLED'}
-
-        selected_bones = context.selected_pose_bones
-        if not selected_bones:
-            self.report({'ERROR'}, "Tidak ada bone yang terseleksi")
-            return {'CANCELLED'}
-
-        for bone in selected_bones:
-            bone.location = (0.0, 0.0, 0.0)
-
-        self.report({'INFO'}, "Reset Location ke default (0, 0, 0)")
-        return {'FINISHED'}
-
-class ResetRotationOperator(bpy.types.Operator):
-    bl_idname = "pose.reset_rotation"
-    bl_label = "Reset Rotation"
-
-    def execute(self, context):
-        if context.object.mode != 'POSE':
-            self.report({'ERROR'}, "Harap berada di Pose Mode")
-            return {'CANCELLED'}
-
-        selected_bones = context.selected_pose_bones
-        if not selected_bones:
-            self.report({'ERROR'}, "Tidak ada bone yang terseleksi")
-            return {'CANCELLED'}
-
-        for bone in selected_bones:
-            bone.rotation_euler = (0.0, 0.0, 0.0)
-
-        self.report({'INFO'}, "Reset Rotation ke default (0, 0, 0)")
-        return {'FINISHED'}
-
-class ResetScaleOperator(bpy.types.Operator):
-    bl_idname = "pose.reset_scale"
-    bl_label = "Reset Scale"
-
-    def execute(self, context):
-        if context.object.mode != 'POSE':
-            self.report({'ERROR'}, "Harap berada di Pose Mode")
-            return {'CANCELLED'}
-
-        selected_bones = context.selected_pose_bones
-        if not selected_bones:
-            self.report({'ERROR'}, "Tidak ada bone yang terseleksi")
-            return {'CANCELLED'}
-
-        for bone in selected_bones:
-            bone.scale = (1.0, 1.0, 1.0)
-
-        self.report({'INFO'}, "Reset Scale ke default (1, 1, 1)")
-        return {'FINISHED'}
-
-class ResetAllOperator(bpy.types.Operator):
-    bl_idname = "pose.reset_all"
+    bl_idname = "object.reset_all"
     bl_label = "Reset All"
 
     def execute(self, context):
-        if context.object.mode != 'POSE':
-            self.report({'ERROR'}, "Harap berada di Pose Mode")
-            return {'CANCELLED'}
+        obj = context.active_object
 
-        selected_bones = context.selected_pose_bones
-        if not selected_bones:
-            self.report({'ERROR'}, "Tidak ada bone yang terseleksi")
-            return {'CANCELLED'}
+        def reset(target):
+            target.location = (0.0, 0.0, 0.0)
+            target.scale = (1.0, 1.0, 1.0)
+            if is_quaternion_mode(target):
+                target.rotation_quaternion = (1.0, 0.0, 0.0, 0.0)
+            else:
+                target.rotation_euler = (0.0, 0.0, 0.0)
 
-        for bone in selected_bones:
-            bone.location = (0.0, 0.0, 0.0)
-            bone.scale = (1.0, 1.0, 1.0)
-            bone.rotation_euler = (0.0, 0.0, 0.0)
+        if obj.type == 'ARMATURE' and obj.mode == 'POSE':
+            for bone in obj.pose.bones:
+                if bone.bone.select:
+                    reset(bone)
+        else:
+            reset(obj)
 
-        self.report({'INFO'}, "Reset Semua ke default")
+        self.report({'INFO'}, "Reset All Transformations")
         return {'FINISHED'}
 
+
 class ConvertRotationToEulerOperator(bpy.types.Operator):
-    """Operator untuk mengubah rotasi quaternion ke Euler XYZ"""
-    bl_idname = "pose.convert_quaternion_to_euler"
+    bl_idname = "object.convert_quaternion_to_euler"
     bl_label = "Convert Quaternion to Euler"
 
     def execute(self, context):
-        if context.object.mode != 'POSE':
-            self.report({'ERROR'}, "Harap berada di Pose Mode")
-            return {'CANCELLED'}
+        obj = context.active_object
 
-        selected_bones = context.selected_pose_bones
-        if not selected_bones:
-            self.report({'ERROR'}, "Tidak ada bone yang terseleksi")
-            return {'CANCELLED'}
+        if obj.type == 'ARMATURE' and obj.mode == 'POSE':
+            for bone in context.selected_pose_bones:
+                if bone.rotation_mode == 'QUATERNION':
+                    bone.rotation_mode = 'XYZ'
+        else:
+            if obj.rotation_mode == 'QUATERNION':
+                obj.rotation_mode = 'XYZ'
 
-        for bone in selected_bones:
-            if bone.rotation_mode == 'QUATERNION':
-                bone.rotation_mode = 'XYZ'
-
-        self.report({'INFO'}, "Rotasi berhasil diubah ke Euler XYZ")
+        self.report({'INFO'}, "Converted rotation to Euler")
         return {'FINISHED'}
 
+
+#============================ UI Panel ============================
+
 class SimpleTransformPanel(bpy.types.Panel):
-    """Panel untuk mengubah transformasi bone yang terseleksi dalam Pose Mode"""
-    bl_label = "Raha Transform Panel"
-    bl_idname = "POSE_PT_transform_panel"
+    bl_label = "✦ Raha Transform Tools"
+    bl_idname = "OBJECT_PT_transform_panel"
     bl_space_type = 'VIEW_3D'
     bl_region_type = 'UI'
-    bl_category = 'Item'
+    bl_category = 'Raha_Tools'
 
     def draw(self, context):
         layout = self.layout
         scene = context.scene
+        obj = context.active_object
+
+        if not obj:
+            layout.label(text="No active object selected", icon='ERROR')
+            return
+
+        # === Transform Panel Toggle ===
+        layout.prop(scene, "panel_transform", toggle=True, icon='ORIENTATION_GLOBAL')
+
+        if scene.panel_transform:
+            col = layout.column(align=True)
+            box = col.box()
+            box.label(text="Active Object: " + obj.name, icon='OBJECT_DATAMODE')
+
+            if obj.type == 'ARMATURE' and obj.mode == 'POSE':
+                selected_bones = context.selected_pose_bones
+                if selected_bones:
+                    bone = selected_bones[0]
+                    box.label(text=f"Bone Mode: {bone.rotation_mode}", icon='GESTURE_ROTATE')
+
+                    col_b = box.column(align=True)
+                    col_b.prop(bone, "location", text="Location")
+                    col_b.operator("object.reset_location", text="Reset Location", icon='LOOP_BACK')
+
+                    if bone.rotation_mode == 'QUATERNION':
+                        col_b.prop(bone, "rotation_quaternion", text="Rotation")
+                    else:
+                        col_b.prop(bone, "rotation_euler", text="Rotation")
+                    row = col_b.row(align=True)
+                    row.operator("object.reset_rotation", text="Reset", icon='LOOP_BACK')
+                    row.operator("object.convert_quaternion_to_euler", text="To Euler", icon='FILE_REFRESH')
+
+                    col_b.prop(bone, "scale", text="Scale")
+                    col_b.operator("object.reset_scale", text="Reset Scale", icon='LOOP_BACK')
+
+                    col_b.operator("object.reset_all", text="Reset ALL", icon='FILE_REFRESH')
+                else:
+                    box.label(text="No pose bone selected", icon='INFO')
+            else:
+                box.label(text=f"Rotation Mode: {obj.rotation_mode}", icon='OBJECT_DATAMODE')
+                col_b = box.column(align=True)
+
+                col_b.prop(obj, "location", text="Location")
+                col_b.operator("object.reset_location", text="Reset Location", icon='LOOP_BACK')
+
+                if obj.rotation_mode == 'QUATERNION':
+                    col_b.prop(obj, "rotation_quaternion", text="Rotation")
+                else:
+                    col_b.prop(obj, "rotation_euler", text="Rotation")
+                row = col_b.row(align=True)
+                row.operator("object.reset_rotation", text="Reset", icon='LOOP_BACK')
+                row.operator("object.convert_quaternion_to_euler", text="To Euler", icon='FILE_REFRESH')
+
+                col_b.prop(obj, "scale", text="Scale")
+                col_b.operator("object.reset_scale", text="Reset Scale", icon='LOOP_BACK')
+
+                col_b.operator("object.reset_all", text="Reset ALL", icon='FILE_REFRESH')
+
+class SimpleTransformPanel(bpy.types.Panel):
+    bl_label = "Raha Transform Panel"
+    bl_idname = "OBJECT_PT_transform_panel"
+    bl_space_type = 'VIEW_3D'
+    bl_region_type = 'UI'
+    bl_category = 'Raha_Tools'
+
+    def draw(self, context):
         layout = self.layout
         scene = context.scene
         obj = context.active_object
-                
-        if context.object.mode != 'POSE':
-            layout.label(text="Harap berada di Pose Mode untuk mengedit bone.")
+
+        if not obj:
+            layout.label(text="No active object")
             return
 
-        # Checkbox untuk menampilkan Tween Machine
-        layout.prop(scene, "panel_transform", text="Show Panel Transform")
-        
-        # Jika checkbox dicentang, tampilkan tombol Tween Machine
-        if scene.panel_transform:            
-            selected_bones = context.selected_pose_bones
-            if selected_bones:
-                row = layout.row(align=True)
-                col = row.column()
-                col.prop(selected_bones[0], "location", text="Location")
+        layout.prop(scene, "panel_transform", toggle=True)
 
-                box = layout.box()
-                box.operator("pose.reset_location", text="Reset Location")
+        if scene.panel_transform:
+            if obj.type == 'ARMATURE' and obj.mode == 'POSE':
+                bones = context.selected_pose_bones
+                if bones:
+                    bone = bones[0]
+                    layout.label(text=f"Rotation Mode: {bone.rotation_mode}", icon='GESTURE_ROTATE')
+                    col = layout.column(align=True)
+                    col.prop(bone, "location", text="Location")
+                    col.operator("object.reset_location", text="Reset Location", icon='LOOP_BACK')
 
-                row = layout.row(align=True)
-                col = row.column()
-                col.prop(selected_bones[0], "rotation_euler", text="Rotation")
+                    if bone.rotation_mode == 'QUATERNION':
+                        col.prop(bone, "rotation_quaternion", text="Rotation")
+                    else:
+                        col.prop(bone, "rotation_euler", text="Rotation")
+                      
+                    row = col.row(align=True)
+                    row.operator("object.reset_rotation", text="Reset", icon='LOOP_BACK')
+                    row.operator("object.convert_quaternion_to_euler", text="To Euler", icon='CON_ROTLIKE')
 
-                box = layout.box()
-                box.operator("pose.reset_rotation", text="Reset Rotation")
-
-                box = layout.box()
-                box.operator("pose.convert_quaternion_to_euler", text="Quaternion to Euler")
-
-                row = layout.row(align=True)
-                col = row.column()
-                col.prop(selected_bones[0], "scale", text="Scale")
-
-                box = layout.box()
-                box.operator("pose.reset_scale", text="Reset Scale")
-
-                box = layout.box()
-                box.operator("pose.reset_all", text="Reset ALL")
-
+                    col.prop(bone, "scale", text="Scale")
+                    col.operator("object.reset_scale", text="Reset Scale", icon='LOOP_BACK')
+                    col.operator("object.reset_all", text="Reset ALL", icon='RECOVER_LAST')
+                else:
+                    layout.label(text="No bones selected.")
             else:
-                layout.label(text="Tidak ada bone yang terseleksi.")
+                layout.label(text=f"Object Mode: {obj.rotation_mode}", icon='OBJECT_DATA')
+                col = layout.column(align=True)
+                col.prop(obj, "location", text="Location")
+                col.operator("object.reset_location", text="Reset Location", icon='LOOP_BACK')
 
-        # Checkbox untuk menampilkan Tween Machine
-        layout.prop(scene, "panel_edit_value", text="Show edit balue")
-        
-        # Jika checkbox dicentang, tampilkan tombol Tween Machine
-        if scene.panel_edit_value:            
-            selected_bones = context.selected_pose_bones
+                if obj.rotation_mode == 'QUATERNION':
+                    col.prop(obj, "rotation_quaternion", text="Rotation")
+                else:
+                    col.prop(obj, "rotation_euler", text="Rotation")
+                row = col.row(align=True)
+                row.operator("object.reset_rotation", text="Reset", icon='LOOP_BACK')
+                row.operator("object.convert_quaternion_to_euler", text="To Euler", icon='CON_ROTLIKE')
 
-            # Ensure we're in Pose Mode and have an armature selected
-            if obj and obj.type == 'ARMATURE' and obj.mode == 'POSE':
-                # Location Panel
-                box = layout.box()
-                box.operator("pose.reset_all", text="Reset ALL")
-                box.label(text="Location")
-                row = box.row(align=True)
-                row.prop(scene, "custom_location", text="Values")
-                row = box.row(align=True)
-                row.prop(scene, "custom_location_axes", text="Axes")
-                box.operator("pose.apply_location", text="Apply Location")
+                col.prop(obj, "scale", text="Scale")
+                col.operator("object.reset_scale", text="Reset Scale", icon='LOOP_BACK')               
+                col.operator("object.reset_all", text="Reset ALL", icon='RECOVER_LAST')
 
-                # Rotation Panel
-                box = layout.box()
-                box.label(text="Rotation")
-                row = box.row(align=True)
-                row.prop(scene, "custom_rotation", text="Values")
-                row = box.row(align=True)
-                row.prop(scene, "custom_rotation_axes", text="Axes")
-                box.operator("pose.apply_rotation", text="Apply Rotation")
+        # ======================== Edit Value Section ========================
+        layout.prop(scene, "panel_edit_value", toggle=True)
 
-                # Scale Panel
-                box = layout.box()
-                box.label(text="Scale")
-                row = box.row(align=True)
-                row.prop(scene, "custom_scale", text="Values")
-                row = box.row(align=True)
-                row.prop(scene, "custom_scale_axes", text="Axes")
-                box.operator("pose.apply_scale", text="Apply Scale")
+        if scene.panel_edit_value:
+            layout.label(text="Edit Value", icon='TOOL_SETTINGS')
+            col = layout.column(align=True)
 
-            
+            # LOCATION
+            col.label(text="Location", icon='EMPTY_AXIS')
+            col.prop(scene, "custom_location", text="Value")
+            row = col.row(align=True)
+            row.label(text="Axes:")
+            for i, axis in enumerate(["X", "Y", "Z"]):
+                row.prop(scene, "custom_location_axes", index=i, text=axis, toggle=True)
+            col.operator("object.apply_location", text="Apply Location", icon='CHECKMARK')
 
-# Registrasi
+            # ROTATION
+            col.separator()
+            col.label(text="Rotation", icon='DRIVER_ROTATIONAL_DIFFERENCE')
+            col.prop(scene, "custom_rotation", text="Value")
+            row = col.row(align=True)
+            row.label(text="Axes:")
+            for i, axis in enumerate(["X", "Y", "Z"]):
+                row.prop(scene, "custom_rotation_axes", index=i, text=axis, toggle=True)
+            col.operator("object.apply_rotation", text="Apply Rotation", icon='CHECKMARK')
+
+            # SCALE
+            col.separator()
+            col.label(text="Scale", icon='FULLSCREEN_EXIT')
+            col.prop(scene, "custom_scale", text="Value")
+            row = col.row(align=True)
+            row.label(text="Axes:")
+            for i, axis in enumerate(["X", "Y", "Z"]):
+                row.prop(scene, "custom_scale_axes", index=i, text=axis, toggle=True)
+            col.operator("object.apply_scale", text="Apply Scale", icon='CHECKMARK')
+
+
+
+
+#============================ Registration ============================
+
+classes = (
+    ApplyLocationOperator,
+    ResetLocationOperator,
+    ApplyRotationOperator,
+    ResetRotationOperator,
+    ApplyScaleOperator,
+    ResetScaleOperator,
+    ResetAllOperator,
+    ConvertRotationToEulerOperator,
+    SimpleTransformPanel,
+)
 
 def register():
-    bpy.utils.register_class(SetTransformForSelectedBonesOperator)    
-    bpy.utils.register_class(SimpleTransformPanel)
-
-       
-    bpy.utils.register_class(ResetLocationOperator)    
-    bpy.utils.register_class(ResetRotationOperator)  
-    bpy.utils.register_class(ResetAllOperator)    
-    bpy.utils.register_class(ResetScaleOperator)      
-    bpy.utils.register_class(ConvertRotationToEulerOperator)         
-        
-
-    bpy.utils.register_class(ApplyLocationOperator)
-    bpy.utils.register_class(ApplyRotationOperator)
-    bpy.utils.register_class(ApplyScaleOperator)
+    for cls in classes:
+        bpy.utils.register_class(cls)
 
     bpy.types.Scene.custom_location = bpy.props.FloatVectorProperty(
-        name="Custom Location",
-        default=(0.0, 0.0, 0.0),
-        subtype='TRANSLATION'
-    )
+        name="Custom Location", default=(0.0, 0.0, 0.0), subtype='TRANSLATION')
     bpy.types.Scene.custom_rotation = bpy.props.FloatVectorProperty(
-        name="Custom Rotation",
-        default=(0.0, 0.0, 0.0),
-        subtype='EULER'
-    )
+        name="Custom Rotation", default=(0.0, 0.0, 0.0), subtype='EULER')
     bpy.types.Scene.custom_scale = bpy.props.FloatVectorProperty(
-        name="Custom Scale",
-        default=(1.0, 1.0, 1.0),
-        subtype='XYZ'
-    )
-
+        name="Custom Scale", default=(1.0, 1.0, 1.0), subtype='XYZ')
     bpy.types.Scene.custom_location_axes = bpy.props.BoolVectorProperty(
-        name="Location Axes",
-        default=(False, False, False),
-        subtype='XYZ'
-    )
+        name="Location Axes", default=(False, False, False), subtype='XYZ')
     bpy.types.Scene.custom_rotation_axes = bpy.props.BoolVectorProperty(
-        name="Rotation Axes",
-        default=(False, False, False),
-        subtype='XYZ'
-    )
+        name="Rotation Axes", default=(False, False, False), subtype='XYZ')
     bpy.types.Scene.custom_scale_axes = bpy.props.BoolVectorProperty(
-        name="Scale Axes",
-        default=(False, False, False),
-        subtype='XYZ'
-    )
-
+        name="Scale Axes", default=(False, False, False), subtype='XYZ')
     bpy.types.Scene.panel_transform = bpy.props.BoolProperty(
-        name="Show Panel Transform",
-        description="Toggle to show or hide the transform panel",
-        default=True
-    )
+        name="Show Panel Transform", default=True)
     bpy.types.Scene.panel_edit_value = bpy.props.BoolProperty(
-        name="Show Panel edit value",
-        description="Toggle to show or hide the transform panel edit value",
-        default=True
-    )
-    
+        name="Show Panel edit value", default=True)
+
 def unregister():
-    bpy.utils.unregister_class(SetTransformForSelectedBonesOperator)    
-    bpy.utils.unregister_class(SimpleTransformPanel)  
-    bpy.utils.ungister_class(SimpleTransformPanelGraph)     
-    bpy.utils.unregister_class(ResetLocationOperator)    
-    bpy.utils.unregister_class(ResetRotationOperator)  
-    bpy.utils.unregister_class(ResetAllOperator)    
-    bpy.utils.unregister_class(ResetScaleOperator)      
-    bpy.utils.unregister_class(ConvertRotationToEulerOperator)    
-    
-    bpy.utils.unregister_class(TransformPanel)
-    bpy.utils.unregister_class(ApplyLocationOperator)
-    bpy.utils.unregister_class(ResetLocationOperator)
-    bpy.utils.unregister_class(ApplyRotationOperator)
-    bpy.utils.unregister_class(ResetRotationOperator)
-    bpy.utils.unregister_class(ApplyScaleOperator)
-    bpy.utils.unregister_class(ResetScaleOperator)
-    bpy.utils.unregister_class(ResetAllOperator)
+    for cls in reversed(classes):
+        bpy.utils.unregister_class(cls)
 
     del bpy.types.Scene.custom_location
     del bpy.types.Scene.custom_rotation
@@ -425,7 +402,6 @@ def unregister():
     del bpy.types.Scene.custom_location_axes
     del bpy.types.Scene.custom_rotation_axes
     del bpy.types.Scene.custom_scale_axes
-
     del bpy.types.Scene.panel_transform
     del bpy.types.Scene.panel_edit_value
 
