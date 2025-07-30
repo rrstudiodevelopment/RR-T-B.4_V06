@@ -255,6 +255,47 @@ class FLOATING_OT_Decimate_Temporary(bpy.types.Operator):
         return {'FINISHED'}  
 
 
+
+# ==================== Properties ====================
+class PoseCopyPasteProps(bpy.types.PropertyGroup):
+    flipped: bpy.props.BoolProperty(
+        name="Flipped Paste",
+        description="Paste pose as mirror",
+        default=False
+    )
+
+# ==================== Operators ====================
+class POSE_OT_CopyPose(bpy.types.Operator):
+    bl_idname = "pose_tools.copy_pose"
+    bl_label = "Copy Pose"
+    bl_description = "Copy current pose"
+
+    def execute(self, context):
+        bpy.ops.pose.copy()
+        self.report({'INFO'}, "Pose copied")
+        return {'FINISHED'}
+
+
+class POSE_OT_PastePose(bpy.types.Operator):
+    bl_idname = "pose_tools.paste_pose"
+    bl_label = "Paste Pose"
+    bl_description = "Paste pose normally (not flipped)"
+
+    def execute(self, context):
+        bpy.ops.pose.paste(flipped=False)
+        self.report({'INFO'}, "Pose pasted")
+        return {'FINISHED'}
+
+
+class POSE_OT_PastePoseFlipped(bpy.types.Operator):
+    bl_idname = "pose_tools.paste_pose_flipped"
+    bl_label = "Paste Mirror"
+    bl_description = "Paste pose as mirror (flipped)"
+
+    def execute(self, context):
+        bpy.ops.pose.paste(flipped=True)
+        self.report({'INFO'}, "Pose pasted (flipped)")
+        return {'FINISHED'}
     
         
 #=========================================================================================================================
@@ -445,7 +486,14 @@ class VIEW3D_PT_MiniTools(bpy.types.Panel):
         
         pose_grid = pose_box.grid_flow(row_major=True, columns=2, even_columns=True, align=True)
         pose_grid.operator("pose.auto_copy_rotation_constraint", text="Copy Rotation", icon="AUTOMERGE_ON")
-        pose_grid.operator("pose.copy_mirror_pose", text="Mirror Pose", icon="ARMATURE_DATA")    
+        pose_grid.operator("pose.copy_mirror_pose", text="Mirror Pose", icon="ARMATURE_DATA")  
+
+        pose_grid = pose_box.grid_flow(row_major=True, columns=3, even_columns=True, align=True)
+      
+        pose_grid.operator("pose_tools.copy_pose", text="", icon='COPYDOWN')
+        pose_grid.operator("pose_tools.paste_pose", text="", icon='PASTEDOWN')
+        pose_grid.operator("pose_tools.paste_pose_flipped", text="", icon='MOD_MIRROR')        
+          
         pose_box = layout.box()         
         pose_box.operator("object.add_controler", text="Add Controller", icon="BONE_DATA")
                             
@@ -477,8 +525,12 @@ def register():
          
               
     bpy.utils.register_class(VIEW3D_PT_MiniTools)    
-    bpy.utils.register_class(OBJECT_OT_add_controler)
-
+    bpy.utils.register_class(OBJECT_OT_add_controler)      
+    
+    bpy.utils.register_class(PoseCopyPasteProps) 
+    bpy.utils.register_class(POSE_OT_CopyPose)            
+    bpy.utils.register_class(POSE_OT_PastePose) 
+    bpy.utils.register_class(POSE_OT_PastePoseFlipped)      
     
    
 
@@ -496,6 +548,13 @@ def unregister():
     bpy.utils.unregister_class(OBJECT_OT_SelectToCursor)
     bpy.utils.unregister_class(OBJECT_OT_CopyMirrorPose)     
     bpy.utils.unregister_class(OBJECT_OT_AlignTool)
+    
+    bpy.utils.unregister_class(PoseCopyPasteProps) 
+    bpy.utils.unregister_class(POSE_OT_CopyPose)            
+    bpy.utils.unregister_class(POSE_OT_PastePose) 
+    bpy.utils.unregister_class(POSE_OT_PastePoseFlipped)      
+        
+    
   
     bpy.utils.unregister_class(OBJECT_OT_CopyRotation)  
     bpy.utils.unregister_class(SaveAmanPanel)
@@ -505,4 +564,3 @@ def unregister():
 
 if __name__ == "__main__":
     register()
-
