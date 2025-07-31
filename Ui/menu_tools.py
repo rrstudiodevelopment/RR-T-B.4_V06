@@ -74,23 +74,15 @@ def download_image():
 #                   SLIDE INFLUENCE    
 
 def get_copy_constraints(bone):
-    constraint_rot = None
-    constraint_loc = None
-
-    for constraint in bone.constraints:
-        if constraint.type == 'COPY_ROTATION':
-            constraint_rot = constraint
-        elif constraint.type == 'COPY_LOCATION':
-            constraint_loc = constraint
-
+    constraint_rot = next((c for c in bone.constraints if c.type == 'COPY_ROTATION' and c.name.startswith("CopasRot")), None)
+    constraint_loc = next((c for c in bone.constraints if c.type == 'COPY_LOCATION' and c.name.startswith("CopasPos")), None)
     return constraint_rot, constraint_loc
 
     
 # Fungsi untuk memperbarui influence kedua constraint
 def update_constraints_influence(self, context):
     bone = self
-    constraint_rot = next((c for c in bone.constraints if c.type == 'COPY_ROTATION' and c.name.startswith("CopasRot")), None)
-    constraint_loc = next((c for c in bone.constraints if c.type == 'COPY_LOCATION' and c.name.startswith("CopasPos")), None)
+    constraint_rot, constraint_loc = get_copy_constraints(bone)
     
     if constraint_rot:
         constraint_rot.influence = bone.copy_constraints_influence
@@ -120,13 +112,13 @@ class RAHA_OT_InfoPopup(bpy.types.Operator):
             layout = self.layout
             
             col = layout.column()
-            col.label(text="update 31/07/2025 - 09:50")
+            col.label(text="update 31/07/2025 - 16:54")
             col.label(text="Raha Tools v06 blender 4++")            
             col.separator() 
             col.label(text="- Update add controler")
                                    
-            col.label(text="- ")
-            col.label(text="- ")
+            col.label(text="- Update UI mini tools")
+            col.label(text="- FIX bug Influence")
             col.label(text="- ")
 
             col.separator()
@@ -402,77 +394,76 @@ class RAHA_PT_Tools_For_Animation(bpy.types.Panel):
             sub.operator("pose.apply_breakdowner_button", text="+").factor = 1.50                      
             layout.label(text="==================================================")                
 #================================ Menu parent conststraint ==================================================================      
+#================================ Menu parent constraint ==================================================================      
         # Checkbox untuk menampilkan Tween Machine
         row = layout.row(align=True)
         row.prop(scene, "show_parent", text="", icon='TRIA_DOWN' if scene.show_parent else 'TRIA_RIGHT', emboss=False)
         row.label(text="Parent - Smart Bake - Step snap")        
 
         if scene.show_parent:
-            
-            # Tombol INFO di kanan atas
-
-            row.alignment = 'RIGHT'
-            row.operator("raha.parent_constraint", text="", icon='INFO')              
-
-            # Box untuk tombol-tombol lain
-            row = layout.row()            
+            # Create main box for all parent constraint controls
             box = layout.box()
-
+            
+            # Info button at top right
+            row = box.row()
+            row.alignment = 'RIGHT'
+            row.operator("raha.parent_constraint", text="", icon='INFO')
+            
+            # Main constraint buttons
             row = box.row(align=True)        
             row.operator("floating.open_childof", text="Child-of")
             row.operator("floating.open_locrote", text="Locrote")  
-
+            
+            # Additional tools
             box.operator("floating.open_smart_bake", text="Smart Bake")               
+
+            # Separator
+            box.separator()
+            
+            # Influence controls
+            obj = context.object
+            if obj and obj.pose:
+                # Child Of influence
+                for bone in obj.pose.bones:
+                    if bone.bone.select:
+                        constraints = [c for c in bone.constraints 
+                                     if c.type == 'CHILD_OF' 
+                                     and c.name.startswith("parent_child")]
+                        for constraint in constraints:
+                            row = box.row()
+                            row.label(text=f"Child Of: {constraint.subtarget}")
+                            row.prop(constraint, "influence", text="Influence Child off", slider=True)
+                
+                # LocRot influence
+                for bone in obj.pose.bones:
+                    if bone.bone.select:
+                        constraint_rot, constraint_loc = get_copy_constraints(bone)
+                        if constraint_rot or constraint_loc:
+                            row = box.row()
+                            row.label(text="LocRot Influence:")
+                            # Use the bone property we defined earlier which has the update function
+                            row.prop(bone, "copy_constraints_influence", text="influence Locrote", slider=True)
+                            
+                            # The actual constraint updates will be handled by the update_constraints_influence function
+                            # that we connected to the bone property
+                            
+#================================ Menu Fake Constraint Dan Step SNap ==================================================================      
+        # Checkbox untuk menampilkan Tween Machine
+        row = layout.row(align=True)
+        row.prop(scene, "show_step", text="", icon='TRIA_DOWN' if scene.show_step else 'TRIA_RIGHT', emboss=False)
+        row.label(text="Fake Constraint & Step snap")        
+
+        if scene.show_step:  # Ini yang diubah dari show_parent ke show_step
+            # Create main box for all parent constraint controls
+            box = layout.box()
+            
+            # Info button at top right
+            row = box.row()
+            row.alignment = 'RIGHT'
+            row.operator("raha.step_snap", text="", icon='INFO')
+              
             box.operator("floating.open_fake_step", text="Fake N Step Snap")
-
-
-
-        
-#========================================================================================================================
-
-
-        
-
-        
-        pcoll = preview_collections.get("raha_previews")     
-
-
-
-
-        #                                                   SLIDE INFLUENCE   
-      
-#influence Childof        
-        obj = context.object
-        if obj and obj.pose:
-            for bone in obj.pose.bones:
-                if bone.bone.select:
-                    constraints = [constraint for constraint in bone.constraints if constraint.type == 'CHILD_OF' and constraint.name.startswith("parent_child")]
-                    for constraint in constraints:
-                        # Menampilkan 'influence' untuk setiap 'Child-Of'
-                        layout.label(text="Parent Childof influence")                        
-                        row = layout.row()
-                        row.label(text=f"Parent {constraint.subtarget})")
-                        row.prop(constraint, "influence", text="inf")   
-                    
-#influence LOCROTAE
-        obj = context.object
-        if obj and obj.pose:
-            for bone in obj.pose.bones:
-                if bone.bone.select:
-                    # Mendapatkan constraint Copy Rotation dan Copy Location
-                    constraint_rot, constraint_loc = get_copy_constraints(bone)
-
-                    if constraint_rot or constraint_loc:
-                        # Menambahkan kontrol bersama untuk influence
-                        layout.label(text="Parent Locrote influence") 
-                        row = layout.row()
-                        row.prop(bone, "copy_constraints_influence", slider=True, text=" LOCROTE")
-
-                        # Set influence untuk kedua constraint sekaligus
-                        if constraint_rot:
-                            constraint_rot.influence = bone.copy_constraints_influence
-                        if constraint_loc:
-                            constraint_loc.influence = bone.copy_constraints_influence
+                         
 
 #========================================= Def Donate Link ===================================================
 class RAHA_OT_Donate(bpy.types.Operator):
@@ -512,6 +503,16 @@ class RAHA_OT_Parent_Constraint_Tutor(bpy.types.Operator):
     def execute(self, context):
         webbrowser.open("https://www.youtube.com/watch?v=zkUT4vZdL_8")
         return {'FINISHED'}     
+    
+#========================================= Def Tutorial Step-Snap ===================================================    
+class RAHA_OT_Step_Snap_Tutor(bpy.types.Operator):
+    """Tutorial Step - Snap"""
+    bl_idname = "raha.step_snap"
+    bl_label = "Step_Snap"
+
+    def execute(self, context):
+        webbrowser.open("https://www.youtube.com/watch?v=D_LfBv4v9QI")
+        return {'FINISHED'}       
 
 
     
@@ -665,7 +666,14 @@ def register():
         name="Show Parent", 
         description="Tampilkan tombol Parent", 
         default=False
-    )           
+    )  
+    
+    global preview_collections
+    bpy.types.Scene.show_step = bpy.props.BoolProperty(
+        name="Show Step", 
+        description="Tampilkan tombol Step Snap", 
+        default=False
+    )              
     
     bpy.types.PoseBone.copy_constraints_influence = bpy.props.FloatProperty(
         name="Copy Constraints Influence",
@@ -724,7 +732,8 @@ def register():
 
 #========================== fake constraint dan step snap =============================      
     bpy.utils.register_class(FLOATING_OT_Open_Smart_Bake )
-    bpy.utils.register_class(FLOATING_OT_Open_Fake_Step )    
+    bpy.utils.register_class(FLOATING_OT_Open_Fake_Step ) 
+    bpy.utils.register_class(RAHA_OT_Step_Snap_Tutor )        
     
 #========================== FLOATING_OT_Open_Mini_tools =============================      
     bpy.utils.register_class(FLOATING_OT_Open_Mini_tools ) 
@@ -770,6 +779,7 @@ def unregister():
 
     bpy.utils.unregister_class(FLOATING_OT_Open_Smart_Bake )
     bpy.utils.unregister_class(FLOATING_OT_Open_Fake_Step )
+    bpy.utils.unregister_class(RAHA_OT_Step_Snap_Tutor )     
 
 #========================== FLOATING_OT_Open_Mini_tools =============================      
     bpy.utils.unregister_class(FLOATING_OT_Open_Mini_tools ) 
