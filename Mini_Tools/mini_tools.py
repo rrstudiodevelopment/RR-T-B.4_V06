@@ -2,6 +2,10 @@
 import bpy
 import webbrowser
 from bpy.props import FloatVectorProperty
+from mathutils import Matrix
+
+# Dictionary to store bone matrices
+stored_matrices = {}
 
 #============================================ Anti-Lag ===================================================================
 def update_simplify_subdivision(self, context):
@@ -299,137 +303,174 @@ class POSE_OT_PastePoseFlipped(bpy.types.Operator):
     
         
 #=========================================================================================================================
-#                       ADD CONTROLER 
+############# ADD CONTROLER ############################################# 
 
-# Script 1: Operator untuk menjalankan Raha Tools
+
+import bpy
+from mathutils import Matrix
+
 class OBJECT_OT_add_controler(bpy.types.Operator):
     bl_idname = "object.add_controler"
-    bl_label = "add controler"
+    bl_label = "Add Controller"
+    bl_description = "Membuat controller armature dengan transformasi yang sama dengan bone aktif (pose mode) atau di origin (object mode)"
     
     def execute(self, context):
-        # Pindah ke Object Mode
-        bpy.ops.object.posemode_toggle()
-
-        # Tambahkan curve
-        bpy.ops.curve.primitive_bezier_circle_add(enter_editmode=False, align='WORLD', location=(0, 0, 0), scale=(1, 1, 1))
-        bpy.context.object.name = "For_add_CTRL_BezierCircle"
-
-        # Tambahkan armature dengan satu bone, pastikan location dan rotation di (0,0,0)
-        bpy.ops.object.armature_add(enter_editmode=False, align='WORLD', location=(0, 0, 0))
-        armature = bpy.context.object
-        armature.location = (0, 0, 0)
-        armature.rotation_euler = (0, 0, 0)
-
-        # Pindah ke Edit Mode untuk mengedit bone
-        bpy.ops.object.editmode_toggle()
-
-        # Pilih bone pertama dan ubah namanya menjadi 'induk'
-        armature_data = bpy.context.object.data
-        first_bone = armature_data.edit_bones[0]  # Bone pertama yang ditambahkan
-        first_bone.select = True
-        first_bone.name = "induk"
-        first_bone.head = (0, 0, 0)
-        first_bone.tail = (0, 0, 1)
-
-        # Deselect bone yang baru diberi nama
-        first_bone.select = False
-
-        # Tambahkan bone kedua (child)
-        bpy.ops.armature.bone_primitive_add()
-
-        # Pilih bone kedua dan ubah namanya menjadi 'child'
-        second_bone = armature_data.edit_bones[-1]  # Bone terakhir yang ditambahkan
-        second_bone.name = "child"
-        second_bone.head = (0, 0, 0)
-        second_bone.tail = (0, 0, 1)
-
-        #selected child - induk lalu parent keep offset
-        bpy.context.object.data.edit_bones["child"].select = True
-        bpy.context.object.data.edit_bones["induk"].select = True
-        bpy.ops.armature.parent_set(type='OFFSET')
-        bpy.context.object.data.edit_bones["child"].select = False
-        bpy.context.object.data.edit_bones["induk"].select = False
-
-        # Pindah ke Pose Mode
-        bpy.ops.object.posemode_toggle()
-
-        #selected child
-        bpy.context.object.pose.bones["child"].bone.select = True
-        #ubah ke euler
-        bpy.context.object.pose.bones["child"].rotation_mode = 'XYZ'
-        #masukan custom display beziercircle
-        bpy.context.object.pose.bones["child"].custom_shape = bpy.data.objects["For_add_CTRL_BezierCircle"]
-        #rotate x nya 90 derajat
-        bpy.context.object.pose.bones["child"].custom_shape_rotation_euler[0] = 1.5708
-        #unselect child
-        bpy.context.object.pose.bones["child"].bone.select = False
-
-        # Selected induk
-        bpy.context.object.pose.bones["induk"].bone.select = True
-        #ubah ke euler
-        bpy.context.object.pose.bones["induk"].rotation_mode = 'XYZ'
-        #masukan custom display beziercircle
-        bpy.context.object.pose.bones["induk"].custom_shape = bpy.data.objects["For_add_CTRL_BezierCircle"]
-        #rotate x nya 90 derajat
-        bpy.context.object.pose.bones["induk"].custom_shape_rotation_euler[0] = 1.5708
-        #scale custom shape
-        bpy.context.object.pose.bones["induk"].custom_shape_scale_xyz = (1.3, 1.3, 1.3)
-
-        #balik ke object mode
-        bpy.ops.object.posemode_toggle()
-
-        #ubah nama add controler
-        bpy.context.object.name = "add_ctrl_armature"
-
-        # Nama koleksi tujuan
-        collection_name = "ETC"
-
-        # Periksa apakah koleksi sudah ada, jika tidak buat koleksi baru
-        if collection_name not in bpy.data.collections:
-            new_collection = bpy.data.collections.new(collection_name)
-            bpy.context.scene.collection.children.link(new_collection)
-            print(f"Koleksi '{collection_name}' berhasil dibuat.")
-        else:
-            new_collection = bpy.data.collections[collection_name]
-            print(f"Koleksi '{collection_name}' sudah ada.")
-
-        # Pastikan ada objek aktif yang bisa dipindahkan
-        active_object = bpy.context.active_object
-        if active_object:
-            # Hapus objek dari koleksi saat ini
-            for collection in active_object.users_collection:
-                collection.objects.unlink(active_object)
-
-            # Pindahkan objek ke koleksi "ETC"
-            new_collection.objects.link(active_object)
-            print(f"Objek '{active_object.name}' telah dipindahkan ke koleksi '{collection_name}'.")
-        else:
-            print("Tidak ada objek aktif untuk dipindahkan.")
-
-        #deselect all
-        bpy.ops.object.select_all(action='DESELECT')
-
-        # Pastikan berada di Object Mode
-        if bpy.ops.object.mode_set.poll():
+        # === 1. Persiapan Awal ===
+        # Simpan mode dan seleksi awal untuk dikembalikan nanti
+        current_mode = context.mode
+        original_active = context.active_object
+        original_selected = context.selected_objects.copy()
+        
+        # Variabel untuk menyimpan transformasi dari bone sumber (jika di pose mode)
+        source_bone_matrix = None
+        source_rig = None
+        
+        # === 2. Handle Pose Mode ===
+        # Jika operator dijalankan di pose mode dengan bone aktif
+        if current_mode == 'POSE' and context.active_pose_bone:
+            source_rig = context.active_object
+            bone = context.active_pose_bone
+            
+            # Simpan transformasi GLOBAL bone:
+            # Matrix world armature * matrix local bone = matrix global bone
+            source_bone_matrix = source_rig.matrix_world @ bone.matrix
+            
+            # Catat nama bone untuk debug
+            print(f"Menyalin transform dari bone: {bone.name} di armature: {source_rig.name}")
+            
+            # Beralih ke object mode sementara untuk membuat controller
             bpy.ops.object.mode_set(mode='OBJECT')
-
-        # Deselect semua objek terlebih dahulu
+        
+        # === 3. Pastikan Object Mode ===
+        if context.mode != 'OBJECT':
+            bpy.ops.object.mode_set(mode='OBJECT')
+        
+        # === 4. Buat Curve sebagai Custom Shape ===
+        bpy.ops.curve.primitive_bezier_circle_add(
+            enter_editmode=False, 
+            align='WORLD', 
+            location=(0, 0, 0), 
+            scale=(1, 1, 1)
+        )
+        curve_obj = context.active_object
+        curve_obj.name = "For_add_CTRL_BezierCircle"
+        
+        # === 5. Buat Armature Controller ===
+        bpy.ops.object.armature_add(
+            enter_editmode=False, 
+            align='WORLD', 
+            location=(0, 0, 0)
+        )
+        ctrl_armature = context.active_object
+        ctrl_armature.name = "add_ctrl_armature"
+        
+        # === 6. Edit Bones ===
+        bpy.ops.object.editmode_toggle()
+        
+        # Dapatkan referensi ke edit bones
+        armature_data = ctrl_armature.data
+        bone1 = armature_data.edit_bones[0]
+        
+        # Setup bone induk
+        bone1.name = "induk"
+        bone1.head = (0, 0, 0)
+        bone1.tail = (0, 0, 1)  # Panjang default
+        
+        # Buat bone child
+        bone2 = armature_data.edit_bones.new("child")
+        bone2.head = (0, 0, 0)
+        bone2.tail = (0, 0, 1)
+        bone2.parent = bone1
+        bone2.use_connect = False  # Parent tanpa koneksi visual
+        
+        bpy.ops.object.editmode_toggle()
+        
+        # === 7. Setup Pose Bones ===
+        bpy.ops.object.posemode_toggle()
+        
+        # Assign custom shape untuk semua bones
+        for bone_name in ["induk", "child"]:
+            pose_bone = ctrl_armature.pose.bones[bone_name]
+            
+            # Setup dasar
+            pose_bone.rotation_mode = 'XYZ'
+            pose_bone.custom_shape = curve_obj
+            pose_bone.custom_shape_rotation_euler[0] = 1.5708  # Rotasi 90 derajat di sumbu X
+            
+            # Bedakan ukuran induk dan child
+            if bone_name == "induk":
+                pose_bone.custom_shape_scale_xyz = (1.3, 1.3, 1.3)
+        
+        bpy.ops.object.posemode_toggle()
+        
+        # === 8. Organisasi Koleksi ===
+        collection_name = "ETC"
+        if collection_name not in bpy.data.collections:
+            bpy.data.collections.new(collection_name)
+            context.scene.collection.children.link(bpy.data.collections[collection_name])
+        
+        # Pindahkan semua objek ke koleksi ETC
+        for obj in [curve_obj, ctrl_armature]:
+            # Hapus dari koleksi lama
+            for coll in obj.users_collection:
+                coll.objects.unlink(obj)
+            # Tambahkan ke koleksi baru
+            bpy.data.collections[collection_name].objects.link(obj)
+        
+        # === 9. Bersihkan Curve ===
         bpy.ops.object.select_all(action='DESELECT')
-
-        # Loop untuk memilih objek yang namanya diawali dengan "For_add_CTRL_BezierCircle"
-        for obj in bpy.data.objects:
-            if obj.name.startswith("For_add_CTRL_BezierCircle") and obj.visible_get():
-                obj.select_set(True)
-
-        print("Object dengan nama awal 'For_add_CTRL_BezierCircle' berhasil dipilih.")
-
-        #hapus curve        
+        curve_obj.select_set(True)
         bpy.ops.object.delete()
-
+        
+        # === 10. Handle Transformasi dari Pose Mode ===
+        if source_bone_matrix and source_rig:
+            print("Memulai proses paste transform...")
+            
+            # Select armature control dan source
+            bpy.ops.object.select_all(action='DESELECT')
+            ctrl_armature.select_set(True)
+            source_rig.select_set(True)
+            context.view_layer.objects.active = source_rig
+            
+            # Masuk ke pose mode bersama
+            bpy.ops.object.posemode_toggle()
+            
+            # Pilih bone induk di control armature
+            bpy.ops.pose.select_all(action='DESELECT')
+            ctrl_armature.pose.bones["induk"].bone.select = True
+            context.view_layer.objects.active = ctrl_armature
+            
+            # Hitung transformasi LOCAL untuk bone controller:
+            # matrix_world control armature -> ke local -> matrix global bone sumber
+            local_matrix = ctrl_armature.matrix_world.inverted() @ source_bone_matrix
+            
+            # Terapkan langsung ke matrix bone
+            ctrl_armature.pose.bones["induk"].matrix = local_matrix
+            
+            # Pastikan rotasi dalam mode XYZ
+            ctrl_armature.pose.bones["induk"].rotation_mode = 'XYZ'
+            
+            print("Transformasi berhasil dipaste!")
+            
+            # Bersihkan seleksi
+            bpy.ops.pose.select_all(action='DESELECT')
+            
+            # === 11. Kembalikan Seleksi Awal ===
+            if original_active:
+                # Coba select objek asli jika masih ada
+                try:
+                    original_active.select_set(True)
+                    context.view_layer.objects.active = original_active
+                except:
+                    pass
+            
+            # Kembalikan ke mode awal jika bukan pose mode
+            if current_mode != 'POSE':
+                bpy.ops.object.mode_set(mode=current_mode.lower().replace('_pose', ''))
+        
         return {'FINISHED'}
-#==========================================================================================
-   
- 
+
+
 #=====================================================================================================================  
 
 #  ======================================================  TOMBOL ============================================== 
