@@ -81,8 +81,8 @@ message = (
     f"🔌 MAC: `{mac_address}`\n"
     f"🕒 Time: `{current_time}`\n"
     f"🧩 Blender Version: `{blender_version}`\n"
-#    f"📁 : `{blend_file}`\n"
-#    f"🎬 Title: `{project_title}`\n"
+    f"📁 : `{blend_file}`\n"
+    f"🎬 Title: `{project_title}`\n"
     f"🔑 UUID: `{uuid_id}`"
 )
 
